@@ -26,6 +26,9 @@ jobs:
           python -m pip install -U pip wheel
           python -m pip install pyinstaller
           python -m pip install -r requirements.txt
+          # opentele (не -ng) тянет PyQt5 — PyInstaller 6.x не умеет Qt5+Qt6 вместе
+          python -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip 2>$null
+          python -c "import PyQt6, opentele, telethon, python_socks, psutil; print('imports ok', opentele.__file__)"
 
       - name: Icons
         run: python assets/make_icon.py

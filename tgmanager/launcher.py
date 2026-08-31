@@ -39,18 +39,27 @@ def _start_http_bridge(plan: LaunchPlan) -> Optional[int]:
     """Поднимает локальный SOCKS5→HTTP мост, переписывает proxychains.conf, возвращает pid."""
     if not plan.bridge_args:
         return None
+    ready_path = os.path.join(plan.workdir, "http_bridge.ready")
+    try:
+        os.remove(ready_path)
+    except OSError:
+        pass
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
-    argv = [sys.executable, *plan.bridge_args]
+    env["PYTHONUNBUFFERED"] = "1"
+    extra = ["--ready-file", ready_path]
+    argv = [sys.executable, *plan.bridge_args, *extra]
     if not getattr(sys, "frozen", False):
-        argv = [sys.executable, "-m", "tgmanager.http_bridge", *plan.bridge_args[1:]]
+        argv = [sys.executable, "-m", "tgmanager.http_bridge", *plan.bridge_args[1:], *extra]
 
+    log_path = os.path.join(plan.workdir, "http_bridge.log")
+    log = open(log_path, "ab", buffering=0)
     kwargs = dict(
         cwd=paths.app_root(),
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=log,
+        stderr=log,
         env=env,
         close_fds=True,
     )
@@ -63,27 +72,27 @@ def _start_http_bridge(plan: LaunchPlan) -> Optional[int]:
         kwargs["start_new_session"] = True
     p = subprocess.Popen(argv, **kwargs)
     port = None
-    deadline = time.time() + 8
+    deadline = time.time() + 25
     while time.time() < deadline:
         if p.poll() is not None:
             break
-        try:
-            line = p.stdout.readline() if p.stdout else b""
-        except Exception:
-            break
-        if not line:
-            time.sleep(0.05)
-            continue
-        text = line.decode("utf-8", "replace").strip()
-        if text.startswith("READY "):
+        if os.path.isfile(ready_path):
             try:
-                port = int(text.split(":")[-1])
-            except ValueError:
-                port = None
-            break
+                with open(ready_path, "r", encoding="utf-8") as f:
+                    text = (f.read() or "").strip()
+                if text.startswith("READY "):
+                    port = int(text.split(":")[-1])
+                    break
+            except (OSError, ValueError):
+                pass
+        time.sleep(0.05)
     if not port:
         try:
             p.kill()
+        except OSError:
+            pass
+        try:
+            log.close()
         except OSError:
             pass
         return None

@@ -2,12 +2,15 @@
 
 proxychains-windows умеет SOCKS5, а TG Manager на Linux через proxychains4
 поддерживает и HTTP. Мост даёт тот же функционал на Windows.
+
+Порт публикуется в --ready-file (надёжно для windowed exe) и в stdout.
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 import base64
+import os
 import sys
 
 
@@ -103,16 +106,30 @@ async def _handle(client_r: asyncio.StreamReader, client_w: asyncio.StreamWriter
             pass
 
 
+def _announce(bind_host: str, port: int, ready_file: str) -> None:
+    line = f"READY {bind_host}:{port}"
+    if ready_file:
+        tmp = ready_file + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(line + "\n")
+        os.replace(tmp, ready_file)
+    try:
+        if sys.stdout is not None:
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+    except Exception:
+        pass
+
+
 async def run_bridge(bind_host: str, bind_port: int, proxy_host: str, proxy_port: int,
-                     user: str, password: str) -> None:
+                     user: str, password: str, ready_file: str = "") -> None:
     server = await asyncio.start_server(
         lambda r, w: _handle(r, w, proxy_host, proxy_port, user, password),
         bind_host, bind_port,
     )
     sockets = server.sockets or []
     port = sockets[0].getsockname()[1] if sockets else bind_port
-    sys.stdout.write(f"READY {bind_host}:{port}\n")
-    sys.stdout.flush()
+    _announce(bind_host, port, ready_file)
     async with server:
         await server.serve_forever()
 
@@ -125,12 +142,14 @@ def main() -> int:
     p.add_argument("--proxy-port", type=int, required=True)
     p.add_argument("--proxy-user", default="")
     p.add_argument("--proxy-pass", default="")
+    p.add_argument("--ready-file", default="")
     args = p.parse_args()
     try:
         asyncio.run(run_bridge(
             args.bind_host, args.bind_port,
             args.proxy_host, args.proxy_port,
             args.proxy_user, args.proxy_pass,
+            args.ready_file,
         ))
         return 0
     except KeyboardInterrupt:

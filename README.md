@@ -115,7 +115,7 @@ CI на этой ветке (GitHub Actions, `windows-latest`) собирает 
 ## Требования
 
 - Windows 10 x64 (1809+) или Windows 11 x64
-- Для исходников: Python 3.10+, PyQt6, Telethon, opentele, python-socks
+- Для исходников: Python 3.10+, PyQt6, Telethon, opentele-ng, python-socks
 
 ## Возможные проблемы
 

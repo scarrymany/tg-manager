@@ -1,6 +1,7 @@
 PyQt6>=6.5
 Pillow>=9
-telethon>=1.34
-opentele>=1.15
+telethon>=1.36,<2
+opentele-ng>=1.4.0
 python-socks>=2.4
 psutil>=5.9
+tgcrypto-pyrofork>=1.2.7

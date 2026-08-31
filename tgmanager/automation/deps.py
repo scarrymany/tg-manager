@@ -24,7 +24,7 @@ def available() -> bool:
 
 if os.name == "nt":
     INSTALL_HINT = (
-        "pip install telethon opentele python-socks\n"
+        "pip install telethon opentele-ng python-socks\n"
         "(в portable-сборке зависимости уже внутри TGManager.exe)"
     )
 else:

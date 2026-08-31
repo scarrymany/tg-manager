@@ -97,7 +97,7 @@ class TaskManager(QObject):
         self.tasks[t.id] = t
 
         proc.start(sys.executable, argv)
-        proc.waitForStarted(3000)
+        proc.waitForStarted(15000)
         lock.acquire(t.workdir, proc.processId(), "cleanup")
         self.added.emit(t.id)
         self.changed.emit(t.id)

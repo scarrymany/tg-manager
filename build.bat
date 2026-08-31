@@ -31,6 +31,7 @@ echo [1/4] Зависимости сборки
 %PY% -m pip install -U pip pyinstaller
 %PY% -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
+%PY% -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip >nul 2>&1
 
 echo [2/4] Иконки
 %PY% assets\make_icon.py

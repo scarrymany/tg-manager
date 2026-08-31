@@ -23,6 +23,8 @@ launch.log
 automation.lock
 telegram.pid
 http_bridge.pid
+http_bridge.ready
+http_bridge.log
 proxychains.conf
 
 # Редакторы
