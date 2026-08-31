@@ -52,8 +52,19 @@ public sealed class TaskVm : INotifyPropertyChanged
     public bool IsRunning => State == "running";
     public bool Finished => State is "done" or "error" or "stopped";
     public bool IsIndeterminate => IsRunning && Total <= 0;
-    public double ProgressMax => Math.Max(1, Total);
-    public double ProgressValue => Total <= 0 ? (Finished ? 1 : 0) : Done;
+
+    // ProgressBar.Value/Maximum биндятся TwoWay по умолчанию — сеттер обязателен, иначе каскад InvalidOperationException.
+    public double ProgressMax
+    {
+        get => Math.Max(1, Total);
+        set { /* ignore */ }
+    }
+
+    public double ProgressValue
+    {
+        get => Total <= 0 ? (Finished ? 1 : 0) : Done;
+        set { /* ignore */ }
+    }
     public string CountText
     {
         get

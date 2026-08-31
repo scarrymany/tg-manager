@@ -15,6 +15,7 @@ public partial class App : System.Windows.Application
     Mutex? _mutex;
     uint _showMessage;
     MainWindow? _window;
+    int _excDialog;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -40,11 +41,26 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException += (_, args) =>
         {
             args.Handled = true;
-            System.Windows.MessageBox.Show(
-                args.Exception.Message,
-                "TG Manager",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            var msg = args.Exception?.Message ?? "";
+            if (msg.Contains("привязк", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("Binding", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("TwoWay", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("OneWayToSource", StringComparison.OrdinalIgnoreCase))
+                return;
+            if (Interlocked.Exchange(ref _excDialog, 1) == 1)
+                return;
+            try
+            {
+                System.Windows.MessageBox.Show(
+                    msg,
+                    "TG Manager",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _excDialog, 0);
+            }
         };
 
         try
