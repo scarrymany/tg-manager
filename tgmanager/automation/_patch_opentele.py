@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import site
+import sys
 import sysconfig
 
 # (относительный путь, что_ищем, на_что_меняем, маркер_уже_пропатчено)
@@ -35,6 +36,9 @@ _PATCHES = [
 
 def _candidate_dirs():
     dirs = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        dirs.append(meipass)
     for fn in (lambda: site.getsitepackages(),
                lambda: [site.getusersitepackages()],
                lambda: [sysconfig.get_paths()["purelib"]]):

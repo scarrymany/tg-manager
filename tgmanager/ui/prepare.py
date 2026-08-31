@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -14,10 +14,23 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .. import paths
+from .. import bundle, paths
 from ..models import Account
 from ..telegram import bundled_exists
 from .style import GREEN, YELLOW
+
+
+class _DownloadThread(QThread):
+    line = pyqtSignal(str)
+    failed = pyqtSignal(str)
+    ok = pyqtSignal()
+
+    def run(self) -> None:
+        try:
+            bundle.download_telegram(log=self.line.emit)
+            self.ok.emit()
+        except Exception as e:
+            self.failed.emit(str(e))
 
 
 class PrepareContainerDialog(QDialog):
@@ -27,7 +40,7 @@ class PrepareContainerDialog(QDialog):
         super().__init__(parent)
         self.account = account
         self.succeeded = False
-        self._proc: QProcess | None = None
+        self._thr: _DownloadThread | None = None
         self.setWindowTitle("Подготовка контейнера")
         self.setMinimumWidth(520)
         self.setModal(True)
@@ -79,14 +92,11 @@ class PrepareContainerDialog(QDialog):
         self.log.setVisible(vis)
         self.toggle_log.setText("Скрыть журнал" if vis else "Показать журнал")
 
-    # ---- шаги ----
     def _run(self) -> None:
-        # Шаг 1: папка контейнера
         self._set(10, "Создание папки контейнера…")
         os.makedirs(paths.account_workdir(self.account.id), exist_ok=True)
         self.log.appendPlainText(f"Папка: {paths.account_workdir(self.account.id)}")
 
-        # Шаг 2: переносной Telegram
         if bundled_exists():
             self._set(100, "✓ Переносной Telegram уже установлен")
             self.log.appendPlainText("Переносной Telegram уже на месте.")
@@ -94,33 +104,27 @@ class PrepareContainerDialog(QDialog):
             return
 
         self._set(30, "Скачивание переносного Telegram…")
-        self.bar.setRange(0, 0)  # индикатор без процентов на время загрузки
-        script = os.path.join(paths.APP_ROOT, "get_telegram.sh")
-        if not os.path.exists(script):
-            self.log.appendPlainText("Не найден get_telegram.sh рядом с программой.")
-            self._finish(False)
-            return
-        self._proc = QProcess(self)
-        self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self._proc.readyReadStandardOutput.connect(self._read)
-        self._proc.finished.connect(self._dl_finished)
-        self._proc.start("bash", [script])
+        self.bar.setRange(0, 0)
+        self._thr = _DownloadThread(self)
+        self._thr.line.connect(self._read)
+        self._thr.ok.connect(lambda: self._dl_finished(True, ""))
+        self._thr.failed.connect(lambda e: self._dl_finished(False, e))
+        self._thr.start()
 
-    def _read(self) -> None:
-        if not self._proc:
-            return
-        data = bytes(self._proc.readAllStandardOutput()).decode("utf-8", "replace")
+    def _read(self, data: str) -> None:
         self.log.appendPlainText(data.rstrip())
         self.log.verticalScrollBar().setValue(self.log.verticalScrollBar().maximum())
 
-    def _dl_finished(self, code: int, _status) -> None:
-        self._proc = None
+    def _dl_finished(self, ok: bool, err: str) -> None:
+        self._thr = None
         self.bar.setRange(0, 100)
-        ok = code == 0 and bundled_exists()
+        ok = ok and bundled_exists()
         if ok:
             self._set(100, "✓ Переносной Telegram установлен")
         else:
-            self._set(100, f"✗ Не удалось скачать (код {code})")
+            if err:
+                self.log.appendPlainText(f"✗ {err}")
+            self._set(100, "✗ Не удалось скачать")
         self._finish(ok)
 
     def _finish(self, ok: bool) -> None:
@@ -141,9 +145,9 @@ class PrepareContainerDialog(QDialog):
             self.btn.setText("Закрыть")
 
     def _on_button(self) -> None:
-        if self._proc is not None:
-            self._proc.kill()
-            self._proc = None
+        if self._thr is not None:
+            self._thr.requestInterruption()
+            self._thr = None
             self.log.appendPlainText("Загрузка отменена.")
         if self.succeeded:
             self.accept()

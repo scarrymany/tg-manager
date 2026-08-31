@@ -65,21 +65,30 @@ class TaskManager(QObject):
             self.removed.emit(account.id)
 
         t = Task(account, actions, revoke)
-        argv = ["-m", "tgmanager.automation.worker", "--workdir", t.workdir,
-                "--actions", ",".join(actions)]
+        worker_argv = ["--workdir", t.workdir, "--actions", ",".join(actions)]
         if revoke:
-            argv.append("--revoke")
+            worker_argv.append("--revoke")
         prx = account.proxy
         if prx.enabled:
-            argv += ["--proxy-type", prx.type, "--proxy-host", prx.host,
-                     "--proxy-port", str(prx.port)]
+            worker_argv += ["--proxy-type", prx.type, "--proxy-host", prx.host,
+                            "--proxy-port", str(prx.port)]
             if prx.username:
-                argv += ["--proxy-user", prx.username]
+                worker_argv += ["--proxy-user", prx.username]
             if prx.password:
-                argv += ["--proxy-pass", prx.password]
+                worker_argv += ["--proxy-pass", prx.password]
+
+        if getattr(sys, "frozen", False):
+            argv = ["--tg-worker", *worker_argv]
+        else:
+            argv = ["-m", "tgmanager.automation.worker", *worker_argv]
 
         proc = QProcess(self)
-        proc.setWorkingDirectory(paths.APP_ROOT)
+        from PyQt6.QtCore import QProcessEnvironment
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONIOENCODING", "utf-8")
+        env.insert("PYTHONUTF8", "1")
+        proc.setProcessEnvironment(env)
+        proc.setWorkingDirectory(paths.app_root())
         proc.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
         proc.readyReadStandardOutput.connect(lambda tid=t.id: self._read(tid))
         proc.readyReadStandardError.connect(lambda tid=t.id: self._read_err(tid))

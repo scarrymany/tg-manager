@@ -1,9 +1,7 @@
-"""Модальный диалог скачивания переносного Telegram (get_telegram.sh)."""
+"""Модальный диалог скачивания переносного Telegram (официальный win64 portable)."""
 from __future__ import annotations
 
-import os
-
-from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -14,7 +12,20 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .. import paths
+from .. import bundle
+
+
+class _DownloadThread(QThread):
+    line = pyqtSignal(str)
+    failed = pyqtSignal(str)
+    ok = pyqtSignal()
+
+    def run(self) -> None:
+        try:
+            bundle.download_telegram(log=self.line.emit)
+            self.ok.emit()
+        except Exception as e:
+            self.failed.emit(str(e))
 
 
 class DownloadTelegramDialog(QDialog):
@@ -23,7 +34,7 @@ class DownloadTelegramDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.succeeded = False
-        self._proc: QProcess | None = None
+        self._thr: _DownloadThread | None = None
         self.setWindowTitle("Переносной Telegram")
         self.setMinimumWidth(520)
         self._build()
@@ -38,14 +49,14 @@ class DownloadTelegramDialog(QDialog):
         title.setObjectName("DialogTitle")
         root.addWidget(title)
 
-        sub = QLabel("Официальный Telegram Desktop будет установлен в папку программы "
-                     "(./telegram). Используется только он.")
+        sub = QLabel("Официальный Telegram Desktop (Windows 64-bit portable) будет "
+                     "установлен в папку программы (./telegram). Используется только он.")
         sub.setObjectName("Hint")
         sub.setWordWrap(True)
         root.addWidget(sub)
 
         self.bar = QProgressBar()
-        self.bar.setRange(0, 0)  # индикатор без процентов
+        self.bar.setRange(0, 0)
         self.bar.setTextVisible(False)
         root.addWidget(self.bar)
 
@@ -64,41 +75,35 @@ class DownloadTelegramDialog(QDialog):
         root.addLayout(btns)
 
     def _start(self) -> None:
-        script = os.path.join(paths.APP_ROOT, "get_telegram.sh")
-        if not os.path.exists(script):
-            self.log.appendPlainText("Не найден get_telegram.sh рядом с программой.")
-            self.bar.setRange(0, 1)
-            return
         self.log.appendPlainText("Скачивание…")
-        self._proc = QProcess(self)
-        self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self._proc.readyReadStandardOutput.connect(self._read)
-        self._proc.finished.connect(self._finished)
-        self._proc.start("bash", [script])
+        self._thr = _DownloadThread(self)
+        self._thr.line.connect(self._append)
+        self._thr.ok.connect(lambda: self._finished(True, ""))
+        self._thr.failed.connect(lambda e: self._finished(False, e))
+        self._thr.start()
 
-    def _read(self) -> None:
-        if not self._proc:
-            return
-        data = bytes(self._proc.readAllStandardOutput()).decode("utf-8", "replace")
-        self.log.appendPlainText(data.rstrip())
+    def _append(self, text: str) -> None:
+        self.log.appendPlainText(text)
         self.log.verticalScrollBar().setValue(self.log.verticalScrollBar().maximum())
 
-    def _finished(self, code: int, _status) -> None:
-        self._proc = None
+    def _finished(self, ok: bool, err: str) -> None:
+        self._thr = None
         self.bar.setRange(0, 1)
-        if code == 0 and os.path.exists(paths.BUNDLED_TELEGRAM_BIN):
+        if ok and bundle.telegram_ready():
             self.succeeded = True
             self.bar.setValue(1)
             self.log.appendPlainText("✓ Готово. Переносной Telegram установлен.")
             self.close_btn.setText("Готово")
         else:
-            self.log.appendPlainText(f"✗ Не удалось (код {code}). Проверьте интернет и повторите.")
+            if err:
+                self.log.appendPlainText(f"✗ {err}")
+            self.log.appendPlainText("Проверьте интернет и повторите.")
             self.close_btn.setText("Закрыть")
 
     def _on_close(self) -> None:
-        if self._proc is not None:
-            self._proc.kill()
-            self._proc = None
+        if self._thr is not None:
+            self._thr.requestInterruption()
+            self._thr = None
         if self.succeeded:
             self.accept()
         else:

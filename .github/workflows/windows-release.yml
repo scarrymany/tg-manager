@@ -1,0 +1,77 @@
+name: Windows portable release
+
+on:
+  push:
+    branches: [windows]
+    tags: ["v*-windows", "v*-win"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Deps
+        run: |
+          python -m pip install -U pip wheel
+          python -m pip install pyinstaller
+          python -m pip install -r requirements.txt
+
+      - name: Icons
+        run: python assets/make_icon.py
+
+      - name: PyInstaller
+        run: python -m PyInstaller --clean --noconfirm --distpath dist --workpath build/pyi tgmanager.spec
+
+      - name: Pack portable folder
+        shell: pwsh
+        run: |
+          $ver = python -c "from tgmanager import __version__; print(__version__)"
+          if (-not $ver) { $ver = "1.0.0" }
+          $out = "dist/TG-Manager"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item dist/TGManager.exe $out/TGManager.exe
+          Copy-Item README.md $out/README.txt
+          if (Test-Path RELEASE_NOTES.md) { Copy-Item RELEASE_NOTES.md $out/RELEASE_NOTES.txt }
+          $zip = "dist/TG-Manager-$ver-windows.zip"
+          if (Test-Path $zip) { Remove-Item $zip }
+          Compress-Archive -Path $out -DestinationPath $zip -CompressionLevel Optimal
+          Get-Item $zip | Format-List Name, Length
+          "PORTABLE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "APP_VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG-Manager-windows
+          path: dist/TG-Manager-*.zip
+          if-no-files-found: error
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "v${{ env.APP_VERSION }}-windows"
+          $zip = Get-ChildItem dist/TG-Manager-*-windows.zip | Select-Object -First 1
+          $notes = Get-Content -Raw RELEASE_NOTES.md
+          $exists = $true
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { $exists = $false }
+          if (-not $exists) {
+            gh release create $tag $zip.FullName --title "TG Manager ${{ env.APP_VERSION }} — Windows 10/11" --notes $notes --target windows
+          } else {
+            gh release upload $tag $zip.FullName --clobber
+            gh release edit $tag --notes $notes --title "TG Manager ${{ env.APP_VERSION }} — Windows 10/11"
+          }
+          gh release view $tag

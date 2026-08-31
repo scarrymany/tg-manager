@@ -1,11 +1,11 @@
-"""Диалог настроек: путь к Telegram, переносной Telegram, proxychains, папка данных."""
+"""Диалог настроек: путь к Telegram, переносной Telegram, прокси-обёртка, ярлык."""
 from __future__ import annotations
 
 import os
+import sys
 
-from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtCore import QThread, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtCore import QUrl
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -14,23 +14,131 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
 
-from .. import paths
+from .. import bundle, paths
 from ..config import Settings
 from ..telegram import is_snap, resolve_proxychains, resolve_telegram
 from .download import DownloadTelegramDialog
 from .style import GREEN, YELLOW
 
 
+class _PcThread(QThread):
+    line = pyqtSignal(str)
+    failed = pyqtSignal(str)
+    ok = pyqtSignal()
+
+    def run(self) -> None:
+        try:
+            bundle.download_proxychains(log=self.line.emit)
+            self.ok.emit()
+        except Exception as e:
+            self.failed.emit(str(e))
+
+
+class DownloadProxychainsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.succeeded = False
+        self._thr: _PcThread | None = None
+        self.setWindowTitle("Прокси-обёртка")
+        self.setMinimumWidth(500)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(22, 22, 22, 18)
+        title = QLabel("Скачивание прокси-обёртки")
+        title.setObjectName("DialogTitle")
+        root.addWidget(title)
+        hint = QLabel("Windows-порт ProxyChains (x64). Нужен, чтобы HTTP/SOCKS5 "
+                      "прокси контейнера применялся к Telegram Desktop.")
+        hint.setObjectName("Hint")
+        hint.setWordWrap(True)
+        root.addWidget(hint)
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 0)
+        self.bar.setTextVisible(False)
+        root.addWidget(self.bar)
+        self.log = QPlainTextEdit()
+        self.log.setObjectName("Log")
+        self.log.setReadOnly(True)
+        self.log.setFixedHeight(120)
+        root.addWidget(self.log)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        self.btn = QPushButton("Отмена")
+        self.btn.setObjectName("Ghost")
+        self.btn.clicked.connect(self._close)
+        row.addWidget(self.btn)
+        root.addLayout(row)
+        self.log.appendPlainText("Скачивание…")
+        self._thr = _PcThread(self)
+        self._thr.line.connect(self.log.appendPlainText)
+        self._thr.ok.connect(lambda: self._done(True, ""))
+        self._thr.failed.connect(lambda e: self._done(False, e))
+        self._thr.start()
+
+    def _done(self, ok: bool, err: str) -> None:
+        self._thr = None
+        self.bar.setRange(0, 1)
+        if ok and bundle.proxychains_ready():
+            self.succeeded = True
+            self.bar.setValue(1)
+            self.log.appendPlainText("✓ Прокси-обёртка установлена.")
+            self.btn.setText("Готово")
+        else:
+            if err:
+                self.log.appendPlainText(f"✗ {err}")
+            self.btn.setText("Закрыть")
+
+    def _close(self) -> None:
+        if self.succeeded:
+            self.accept()
+        else:
+            self.reject()
+
+
+def create_desktop_shortcut() -> str:
+    """Создаёт ярлык TG Manager.lnk на рабочем столе. Возвращает путь."""
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    if not os.path.isdir(desktop):
+        desktop = os.path.join(os.environ.get("USERPROFILE", ""), "Desktop")
+    lnk = os.path.join(desktop, "TG Manager.lnk")
+    if getattr(sys, "frozen", False):
+        target = sys.executable
+        workdir = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        target = sys.executable
+        workdir = paths.app_root()
+    ico = paths.icon_ico_path()
+    # PowerShell COM shortcut — без pywin32
+    ps = (
+        "$ws = New-Object -ComObject WScript.Shell; "
+        f"$s = $ws.CreateShortcut('{lnk.replace(chr(39), chr(39)+chr(39))}'); "
+        f"$s.TargetPath = '{target.replace(chr(39), chr(39)+chr(39))}'; "
+        f"$s.WorkingDirectory = '{workdir.replace(chr(39), chr(39)+chr(39))}'; "
+    )
+    if os.path.isfile(ico):
+        ps += f"$s.IconLocation = '{ico.replace(chr(39), chr(39)+chr(39))}'; "
+    if not getattr(sys, "frozen", False):
+        main_py = os.path.join(workdir, "main.py")
+        ps += f"$s.Arguments = '\"{main_py}\"'; "
+    ps += "$s.Description = 'TG Manager'; $s.Save()"
+    import subprocess
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps],
+        check=True, capture_output=True, timeout=20,
+    )
+    return lnk
+
+
 class SettingsDialog(QDialog):
     def __init__(self, parent, settings: Settings):
         super().__init__(parent)
         self.settings = settings
-        self._proc: QProcess | None = None
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(560)
         self._build()
@@ -45,7 +153,6 @@ class SettingsDialog(QDialog):
         title.setObjectName("DialogTitle")
         root.addWidget(title)
 
-        # --- Карточка: Telegram ---
         tg_card, tg_body = self._card("TELEGRAM (БИНАРНИК ДЛЯ ЗАПУСКА)")
         tg_row = QHBoxLayout()
         tg_row.setSpacing(8)
@@ -77,12 +184,11 @@ class SettingsDialog(QDialog):
         tg_body.addLayout(dl_row)
         root.addWidget(tg_card)
 
-        # --- Карточка: proxychains ---
-        pc_card, pc_body = self._card("PROXYCHAINS (ДЛЯ HTTP/SOCKS5 ПРОКСИ)")
+        pc_card, pc_body = self._card("ПРОКСИ-ОБЁРТКА (HTTP / SOCKS5 НА КОНТЕЙНЕР)")
         pc_row = QHBoxLayout()
         pc_row.setSpacing(8)
         self.pc_edit = QLineEdit(self.settings.proxychains_binary)
-        self.pc_edit.setPlaceholderText("Автоопределение (proxychains4)")
+        self.pc_edit.setPlaceholderText("Автоопределение (tools/proxychains)")
         self.pc_edit.textChanged.connect(self._refresh_status)
         pc_auto = QPushButton("Автоопределить")
         pc_auto.setObjectName("Ghost")
@@ -94,16 +200,22 @@ class SettingsDialog(QDialog):
         self.pc_status.setObjectName("Hint")
         self.pc_status.setWordWrap(True)
         pc_body.addWidget(self.pc_status)
+        pc_dl = QHBoxLayout()
+        self.pc_dl_btn = QPushButton("⬇  Скачать прокси-обёртку")
+        self.pc_dl_btn.setObjectName("Ghost")
+        self.pc_dl_btn.clicked.connect(self._download_pc)
+        pc_dl.addWidget(self.pc_dl_btn)
+        pc_dl.addStretch(1)
+        pc_body.addLayout(pc_dl)
         root.addWidget(pc_card)
 
-        # --- Карточка: прочее ---
         misc_card, misc_body = self._card("ПРОЧЕЕ")
         self.many_chk = QCheckBox("Разрешать много окон одновременно (флаг -many)")
         self.many_chk.setChecked(self.settings.allow_many)
         misc_body.addWidget(self.many_chk)
 
         data_row = QHBoxLayout()
-        data_lbl = QLabel(f"Данные аккаунтов: {paths.ACCOUNTS_DIR}")
+        data_lbl = QLabel(f"Данные контейнеров: {paths.ACCOUNTS_DIR}")
         data_lbl.setObjectName("Hint")
         data_lbl.setWordWrap(True)
         open_data = QPushButton("Открыть")
@@ -114,9 +226,16 @@ class SettingsDialog(QDialog):
         data_row.addWidget(data_lbl, 1)
         data_row.addWidget(open_data)
         misc_body.addLayout(data_row)
+
+        sc_row = QHBoxLayout()
+        sc_btn = QPushButton("📌  Ярлык на рабочий стол")
+        sc_btn.setObjectName("Ghost")
+        sc_btn.clicked.connect(self._shortcut)
+        sc_row.addWidget(sc_btn)
+        sc_row.addStretch(1)
+        misc_body.addLayout(sc_row)
         root.addWidget(misc_card)
 
-        # Кнопки
         btns = QHBoxLayout()
         btns.addStretch(1)
         cancel = QPushButton("Отмена")
@@ -130,7 +249,6 @@ class SettingsDialog(QDialog):
         root.addLayout(btns)
 
     def _card(self, title: str):
-        """Карточка-группа настроек (QFrame#SettingsCard). Возвращает (frame, body_vbox)."""
         card = QFrame()
         card.setObjectName("SettingsCard")
         body = QVBoxLayout(card)
@@ -141,9 +259,12 @@ class SettingsDialog(QDialog):
         body.addWidget(head)
         return card, body
 
-    # ---- actions ----
     def _browse_tg(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Выберите бинарник Telegram", os.path.expanduser("~"))
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Выберите Telegram.exe",
+            os.path.expanduser("~"),
+            "Telegram (Telegram.exe);;Все файлы (*.*)",
+        )
         if path:
             self.tg_edit.setText(path)
 
@@ -166,11 +287,7 @@ class SettingsDialog(QDialog):
                                    "«Скачать переносной Telegram».")
             self.tg_status.setStyleSheet(f"color:{YELLOW};")
         elif is_snap(tg):
-            self.tg_status.setText(
-                f"⚠ Указан snap: {tg}\n"
-                "Через snap прокси (proxychains) НЕ работает. "
-                "Уберите путь, чтобы использовать переносной Telegram."
-            )
+            self.tg_status.setText(f"⚠ Указан snap: {tg}")
             self.tg_status.setStyleSheet(f"color:{YELLOW};")
         else:
             self.tg_status.setText(f"✓ Будет использован: {tg}")
@@ -178,20 +295,36 @@ class SettingsDialog(QDialog):
 
         pc = resolve_proxychains(self.pc_edit.text().strip())
         if pc:
-            self.pc_status.setText(f"✓ proxychains: {pc}")
+            self.pc_status.setText(f"✓ Прокси-обёртка: {pc}")
             self.pc_status.setStyleSheet(f"color:{GREEN};")
         else:
-            self.pc_status.setText("⚠ proxychains4 не найден. Установите: sudo apt install proxychains4")
+            self.pc_status.setText(
+                "⚠ Прокси-обёртка не найдена. Нажмите «Скачать прокси-обёртку», "
+                "если будете запускать контейнеры через HTTP/SOCKS5."
+            )
             self.pc_status.setStyleSheet(f"color:{YELLOW};")
 
     def _download_telegram(self) -> None:
         dlg = DownloadTelegramDialog(self)
         dlg.exec()
         if dlg.succeeded:
-            # оставляем автоопределение (пустое поле) — bundled подхватится сам
             if self.tg_edit.text().strip() and not os.path.exists(self.tg_edit.text().strip()):
                 self.tg_edit.clear()
         self._refresh_status()
+
+    def _download_pc(self) -> None:
+        dlg = DownloadProxychainsDialog(self)
+        dlg.exec()
+        if dlg.succeeded:
+            self.pc_edit.clear()
+        self._refresh_status()
+
+    def _shortcut(self) -> None:
+        try:
+            lnk = create_desktop_shortcut()
+            QMessageBox.information(self, "Ярлык", f"Создан:\n{lnk}")
+        except Exception as e:
+            QMessageBox.warning(self, "Ярлык", f"Не удалось создать ярлык:\n{e}")
 
     def _save(self) -> None:
         self.settings.telegram_binary = self.tg_edit.text().strip()

@@ -1,15 +1,32 @@
-# Переносной Telegram (скачивается отдельно, большой)
+# Переносной Telegram и прокси-обёртка (скачиваются отдельно)
 /telegram/
+/tools/
+/accounts/
+/config.json
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+venv/
+
+# Сборка
+/build/
+/dist/
+/release/
+*.spec.bak
 
 # Логи и локальные данные
 *.log
 launch.log
+automation.lock
+telegram.pid
+http_bridge.pid
+proxychains.conf
 
 # Редакторы
 .vscode/
 .idea/
+Thumbs.db
+Desktop.ini

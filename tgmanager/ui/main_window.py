@@ -25,13 +25,13 @@ from .. import APP_NAME, __version__, launcher, paths
 from ..automation import deps, lock
 from ..config import Store
 from ..models import Account
-from ..telegram import build_launch_plan, resolve_telegram
+from ..telegram import build_launch_plan, resolve_proxychains, resolve_telegram
 from .account_dialog import AccountDialog
 from .automation_dialog import AutomationDialog
 from .card import AccountRow
 from .download import DownloadTelegramDialog
 from .prepare import PrepareContainerDialog
-from .settings_dialog import SettingsDialog
+from .settings_dialog import DownloadProxychainsDialog, SettingsDialog
 from .style import QSS
 from .task_manager import TaskManager
 from .task_row import TaskLogDialog, TaskRow
@@ -395,6 +395,19 @@ class MainWindow(QMainWindow):
             if not dlg.succeeded:
                 self.statusBar().showMessage("Переносной Telegram не установлен", 5000)
                 return
+
+        # Прокси без обёртки — предлагаем скачать (Windows ProxyChains)
+        if account.proxy.enabled and not resolve_proxychains(self.store.settings.proxychains_binary):
+            r = QMessageBox.question(
+                self, "Нужна прокси-обёртка",
+                "У контейнера задан прокси, но обёртка ещё не установлена.\n"
+                "Скачать прокси-обёртку сейчас (~200 КБ)?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if r == QMessageBox.StandardButton.Yes:
+                pcd = DownloadProxychainsDialog(self)
+                pcd.exec()
 
         # Предупреждение об отсутствии tdata
         if not os.path.isdir(paths.account_tdata(account_id)):

@@ -95,6 +95,15 @@ def main() -> None:
         print("wrote", names[sz], f"+ running_{sz}")
     build_logo_mark(256).save(os.path.join(HERE, "logo_mark.png"))
     print("wrote logo_mark.png")
+    ico_sizes = (16, 24, 32, 48, 64, 128, 256)
+    ico_imgs = [build_app_icon(s) for s in ico_sizes]
+    ico_path = os.path.join(HERE, "icon.ico")
+    ico_imgs[-1].save(
+        ico_path, format="ICO",
+        append_images=ico_imgs[:-1],
+        sizes=[(s, s) for s in ico_sizes],
+    )
+    print("wrote icon.ico")
 
 
 if __name__ == "__main__":
