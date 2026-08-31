@@ -17,12 +17,22 @@ echo "    Папка программы: $DIR"
 
 # --- Системные зависимости ---
 if command -v apt >/dev/null 2>&1; then
-    echo "==> Зависимости (нужен sudo): python3-pyqt6, proxychains4, python3-pil"
+    echo "==> Зависимости (нужен sudo): PyQt6, proxychains4, Pillow, Telethon, pip"
     sudo apt update -y || true
-    sudo apt install -y python3-pyqt6 proxychains4 python3-pil || \
+    sudo apt install -y python3-pyqt6 proxychains4 python3-pil python3-telethon python3-pip || \
         echo "!! Не удалось поставить пакеты через apt — проверьте вручную."
 else
     echo "!! apt не найден. Установите вручную: PyQt6 и proxychains4."
+fi
+
+# --- opentele (чтение tdata) — через pip; + патч совместимости с Python 3.13+ ---
+if python3 -m pip --version >/dev/null 2>&1; then
+    echo "==> Ставлю opentele (pip --user)"
+    python3 -m pip install --user --break-system-packages opentele >/dev/null 2>&1 || \
+        echo "!! opentele не установился — автоматизация будет недоступна."
+    python3 "$DIR/tgmanager/automation/_patch_opentele.py" >/dev/null 2>&1 || true
+else
+    echo "!! pip недоступен — opentele не поставлен (автоматизация опциональна)."
 fi
 
 python3 -c "import PyQt6.QtWidgets" 2>/dev/null && echo "==> PyQt6: OK" \

@@ -21,10 +21,12 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import APP_NAME, __version__, launcher, paths
+from ..automation import deps, lock
 from ..config import Store
 from ..models import Account
 from ..telegram import build_launch_plan, resolve_telegram
 from .account_dialog import AccountDialog
+from .automation_dialog import AutomationDialog
 from .card import AccountRow
 from .download import DownloadTelegramDialog
 from .prepare import PrepareContainerDialog
@@ -191,6 +193,7 @@ class MainWindow(QMainWindow):
             row.edit.connect(self.edit_account)
             row.delete.connect(self.delete_account)
             row.open_folder.connect(self.open_folder)
+            row.automate.connect(self.automate_account)
             self.rows_layout.addWidget(row)
             self.cards[account.id] = row
         self.rows_layout.addStretch(1)
@@ -203,7 +206,9 @@ class MainWindow(QMainWindow):
     def _poll_status(self) -> None:
         for aid, card in self.cards.items():
             workdir = paths.account_workdir(aid)
-            card.set_running(launcher.is_running(workdir))
+            busy = lock.is_locked(workdir)
+            card.set_busy(busy)
+            card.set_running(False if busy else launcher.is_running(workdir))
             card.refresh()
 
     # ---------- действия ----------
@@ -279,6 +284,11 @@ class MainWindow(QMainWindow):
         if not account:
             return
         workdir = paths.account_workdir(account_id)
+        if lock.is_locked(workdir):
+            QMessageBox.warning(self, "Идёт автоматизация",
+                                "Сейчас выполняется чистка этого контейнера. "
+                                "Запуск заблокирован до завершения.")
+            return
         if launcher.is_running(workdir):
             self.statusBar().showMessage("Контейнер уже запущен", 4000)
             return
@@ -349,6 +359,30 @@ class MainWindow(QMainWindow):
         card = self.cards.get(account_id)
         if card:
             QTimer.singleShot(800, lambda: card.set_running(launcher.is_running(workdir)))
+
+    def automate_account(self, account_id: str) -> None:
+        account = self.store.get(account_id)
+        if not account:
+            return
+        workdir = paths.account_workdir(account_id)
+        if launcher.is_running(workdir):
+            QMessageBox.warning(self, "Telegram запущен",
+                                "Сначала остановите Telegram этого контейнера («Стоп») — "
+                                "иначе сессию выбросит при подключении.")
+            return
+        if deps.missing():
+            QMessageBox.warning(
+                self, "Нужны зависимости",
+                "Для автоматизации нужны telethon и opentele. Установите:\n\n"
+                + deps.INSTALL_HINT)
+            return
+        if not os.path.isdir(paths.account_tdata(account_id)):
+            QMessageBox.warning(self, "Нет tdata",
+                                "В контейнере нет папки tdata — нечего чистить.")
+            return
+        dlg = AutomationDialog(self, account)
+        dlg.exec()
+        self._poll_status()
 
     def open_settings(self) -> None:
         dlg = SettingsDialog(self, self.store.settings)

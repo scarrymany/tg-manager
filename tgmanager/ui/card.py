@@ -25,11 +25,14 @@ class AccountRow(QFrame):
     edit = pyqtSignal(str)
     delete = pyqtSignal(str)
     open_folder = pyqtSignal(str)
+    automate = pyqtSignal(str)
 
     def __init__(self, account: Account, parent: QWidget | None = None):
         super().__init__(parent)
         self.account = account
-        self._running = None
+        self._running = False
+        self._busy = False
+        self._state = None  # чтобы первое обновление применилось
         self.setObjectName("Row")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setFixedHeight(60)
@@ -84,6 +87,11 @@ class AccountRow(QFrame):
         folder_btn.setFixedWidth(96)
         folder_btn.setToolTip("Открыть папку аккаунта — сюда положите папку tdata")
         folder_btn.clicked.connect(lambda: self.open_folder.emit(self.account.id))
+        self.auto_btn = QPushButton("🧹")
+        self.auto_btn.setObjectName("Ghost")
+        self.auto_btn.setFixedSize(34, 34)
+        self.auto_btn.setToolTip("Автоматизация (чистка аккаунта)")
+        self.auto_btn.clicked.connect(lambda: self.automate.emit(self.account.id))
         edit_btn = QPushButton("✏")
         edit_btn.setObjectName("Ghost")
         edit_btn.setFixedSize(34, 34)
@@ -95,10 +103,10 @@ class AccountRow(QFrame):
         del_btn.setToolTip("Удалить")
         del_btn.clicked.connect(lambda: self.delete.emit(self.account.id))
 
-        for w in (self.launch_btn, self.stop_btn, folder_btn, edit_btn, del_btn):
+        for w in (self.launch_btn, self.stop_btn, folder_btn, self.auto_btn, edit_btn, del_btn):
             root.addWidget(w)
 
-        self.set_running(False)
+        self._apply_state()
         self.refresh()
 
     # ---------- обновление ----------
@@ -119,19 +127,39 @@ class AccountRow(QFrame):
             f'<span style="color:{TEXT_SEC}">{proxy}  ·  </span>{tdata}')
 
     def set_running(self, running: bool) -> None:
-        if running == self._running:
+        if running != self._running:
+            self._running = running
+            self._apply_state()
+
+    def set_busy(self, busy: bool) -> None:
+        if busy != self._busy:
+            self._busy = busy
+            self._apply_state()
+
+    def _apply_state(self) -> None:
+        # приоритет: busy (автоматизация) > running > stopped
+        state = "busy" if self._busy else ("running" if self._running else "stopped")
+        if state == self._state:
             return
-        self._running = running
-        if running:
+        self._state = state
+        if state == "busy":
+            self.pill.setText("🔒 Чистка…")
+            self.pill.setObjectName("PillStopped")
+            self.launch_btn.setEnabled(False)
+            self.stop_btn.setEnabled(False)
+            self.auto_btn.setEnabled(True)   # открыть окно прогресса
+        elif state == "running":
             self.pill.setText("● Запущен")
             self.pill.setObjectName("PillRunning")
             self.launch_btn.setEnabled(False)
             self.stop_btn.setEnabled(True)
+            self.auto_btn.setEnabled(False)  # нельзя чистить при запущенном TG
         else:
             self.pill.setText("○ Остановлен")
             self.pill.setObjectName("PillStopped")
             self.launch_btn.setEnabled(True)
             self.stop_btn.setEnabled(False)
+            self.auto_btn.setEnabled(True)
         self.pill.style().unpolish(self.pill)
         self.pill.style().polish(self.pill)
 
