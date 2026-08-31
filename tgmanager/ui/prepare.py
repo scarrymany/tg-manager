@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from .. import paths
 from ..models import Account
 from ..telegram import bundled_exists
+from .style import GREEN, YELLOW
 
 
 class PrepareContainerDialog(QDialog):
@@ -39,7 +40,7 @@ class PrepareContainerDialog(QDialog):
         root.setSpacing(12)
 
         title = QLabel("Подготовка контейнера")
-        title.setObjectName("AppTitle")
+        title.setObjectName("DialogTitle")
         root.addWidget(title)
 
         self.sub = QLabel(f"«{self.account.name}»")
@@ -55,6 +56,7 @@ class PrepareContainerDialog(QDialog):
         root.addWidget(self.bar)
 
         self.log = QPlainTextEdit()
+        self.log.setObjectName("Log")
         self.log.setReadOnly(True)
         self.log.setFixedHeight(130)
         self.log.setVisible(False)
@@ -127,7 +129,7 @@ class PrepareContainerDialog(QDialog):
         self.bar.setValue(100)
         if ok:
             self.status.setText("✓ Контейнер готов. Положите папку tdata и запускайте.")
-            self.status.setStyleSheet("color:#3ddc84;")
+            self.status.setStyleSheet(f"color:{GREEN};")
             self.btn.setText("Готово")
             self.btn.setObjectName("Primary")
             self.btn.style().unpolish(self.btn)
@@ -135,7 +137,7 @@ class PrepareContainerDialog(QDialog):
         else:
             self.status.setText("Контейнер создан, но Telegram не скачан. "
                                 "Можно повторить позже (при запуске или в настройках).")
-            self.status.setStyleSheet("color:#ffb454;")
+            self.status.setStyleSheet(f"color:{YELLOW};")
             self.btn.setText("Закрыть")
 
     def _on_button(self) -> None:

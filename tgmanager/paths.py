@@ -44,3 +44,8 @@ def account_tdata(account_id: str) -> str:
 
 def icon_path() -> str:
     return os.path.join(ASSETS_DIR, "icon.png")
+
+
+def logo_mark_path() -> str:
+    """Белая плашка со знаком — для шапки/пустого состояния (стиль SCARP .logo-icon)."""
+    return os.path.join(ASSETS_DIR, "logo_mark.png")

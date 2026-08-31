@@ -10,10 +10,10 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -23,6 +23,7 @@ from .. import paths
 from ..config import Settings
 from ..telegram import is_snap, resolve_proxychains, resolve_telegram
 from .download import DownloadTelegramDialog
+from .style import GREEN, YELLOW
 
 
 class SettingsDialog(QDialog):
@@ -37,15 +38,15 @@ class SettingsDialog(QDialog):
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(22, 22, 22, 18)
+        root.setContentsMargins(20, 20, 20, 16)
         root.setSpacing(14)
 
         title = QLabel("Настройки")
-        title.setObjectName("AppTitle")
+        title.setObjectName("DialogTitle")
         root.addWidget(title)
 
-        # --- Telegram binary ---
-        root.addWidget(self._section("Telegram (бинарник для запуска)"))
+        # --- Карточка: Telegram ---
+        tg_card, tg_body = self._card("TELEGRAM (БИНАРНИК ДЛЯ ЗАПУСКА)")
         tg_row = QHBoxLayout()
         tg_row.setSpacing(8)
         self.tg_edit = QLineEdit(self.settings.telegram_binary)
@@ -60,24 +61,24 @@ class SettingsDialog(QDialog):
         tg_row.addWidget(self.tg_edit, 1)
         tg_row.addWidget(browse)
         tg_row.addWidget(auto)
-        root.addLayout(tg_row)
+        tg_body.addLayout(tg_row)
 
         self.tg_status = QLabel()
         self.tg_status.setObjectName("Hint")
         self.tg_status.setWordWrap(True)
-        root.addWidget(self.tg_status)
+        tg_body.addWidget(self.tg_status)
 
-        # Скачать переносной Telegram
         dl_row = QHBoxLayout()
         self.dl_btn = QPushButton("⬇  Скачать переносной Telegram")
         self.dl_btn.setObjectName("Primary")
         self.dl_btn.clicked.connect(self._download_telegram)
         dl_row.addWidget(self.dl_btn)
         dl_row.addStretch(1)
-        root.addLayout(dl_row)
+        tg_body.addLayout(dl_row)
+        root.addWidget(tg_card)
 
-        # --- proxychains ---
-        root.addWidget(self._section("proxychains (для HTTP/SOCKS5 прокси)"))
+        # --- Карточка: proxychains ---
+        pc_card, pc_body = self._card("PROXYCHAINS (ДЛЯ HTTP/SOCKS5 ПРОКСИ)")
         pc_row = QHBoxLayout()
         pc_row.setSpacing(8)
         self.pc_edit = QLineEdit(self.settings.proxychains_binary)
@@ -88,18 +89,19 @@ class SettingsDialog(QDialog):
         pc_auto.clicked.connect(self._autodetect_pc)
         pc_row.addWidget(self.pc_edit, 1)
         pc_row.addWidget(pc_auto)
-        root.addLayout(pc_row)
+        pc_body.addLayout(pc_row)
         self.pc_status = QLabel()
         self.pc_status.setObjectName("Hint")
         self.pc_status.setWordWrap(True)
-        root.addWidget(self.pc_status)
+        pc_body.addWidget(self.pc_status)
+        root.addWidget(pc_card)
 
-        # --- прочее ---
+        # --- Карточка: прочее ---
+        misc_card, misc_body = self._card("ПРОЧЕЕ")
         self.many_chk = QCheckBox("Разрешать много окон одновременно (флаг -many)")
         self.many_chk.setChecked(self.settings.allow_many)
-        root.addWidget(self.many_chk)
+        misc_body.addWidget(self.many_chk)
 
-        # Папка данных
         data_row = QHBoxLayout()
         data_lbl = QLabel(f"Данные аккаунтов: {paths.ACCOUNTS_DIR}")
         data_lbl.setObjectName("Hint")
@@ -111,7 +113,8 @@ class SettingsDialog(QDialog):
         )
         data_row.addWidget(data_lbl, 1)
         data_row.addWidget(open_data)
-        root.addLayout(data_row)
+        misc_body.addLayout(data_row)
+        root.addWidget(misc_card)
 
         # Кнопки
         btns = QHBoxLayout()
@@ -126,10 +129,17 @@ class SettingsDialog(QDialog):
         btns.addWidget(save)
         root.addLayout(btns)
 
-    def _section(self, text: str) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setObjectName("FieldLabel")
-        return lbl
+    def _card(self, title: str):
+        """Карточка-группа настроек (QFrame#SettingsCard). Возвращает (frame, body_vbox)."""
+        card = QFrame()
+        card.setObjectName("SettingsCard")
+        body = QVBoxLayout(card)
+        body.setContentsMargins(14, 12, 14, 12)
+        body.setSpacing(8)
+        head = QLabel(title)
+        head.setObjectName("FieldLabel")
+        body.addWidget(head)
+        return card, body
 
     # ---- actions ----
     def _browse_tg(self) -> None:
@@ -154,25 +164,25 @@ class SettingsDialog(QDialog):
         if not tg:
             self.tg_status.setText("⚠ Переносной Telegram не установлен — нажмите "
                                    "«Скачать переносной Telegram».")
-            self.tg_status.setStyleSheet("color:#ffb454;")
+            self.tg_status.setStyleSheet(f"color:{YELLOW};")
         elif is_snap(tg):
             self.tg_status.setText(
                 f"⚠ Указан snap: {tg}\n"
                 "Через snap прокси (proxychains) НЕ работает. "
                 "Уберите путь, чтобы использовать переносной Telegram."
             )
-            self.tg_status.setStyleSheet("color:#ffb454;")
+            self.tg_status.setStyleSheet(f"color:{YELLOW};")
         else:
             self.tg_status.setText(f"✓ Будет использован: {tg}")
-            self.tg_status.setStyleSheet("color:#3ddc84;")
+            self.tg_status.setStyleSheet(f"color:{GREEN};")
 
         pc = resolve_proxychains(self.pc_edit.text().strip())
         if pc:
             self.pc_status.setText(f"✓ proxychains: {pc}")
-            self.pc_status.setStyleSheet("color:#3ddc84;")
+            self.pc_status.setStyleSheet(f"color:{GREEN};")
         else:
             self.pc_status.setText("⚠ proxychains4 не найден. Установите: sudo apt install proxychains4")
-            self.pc_status.setStyleSheet("color:#ffb454;")
+            self.pc_status.setStyleSheet(f"color:{YELLOW};")
 
     def _download_telegram(self) -> None:
         dlg = DownloadTelegramDialog(self)

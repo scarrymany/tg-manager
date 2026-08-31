@@ -6,12 +6,16 @@ import os
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon, QPixmap
 from PyQt6.QtWidgets import (
+    QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -26,6 +30,14 @@ from .download import DownloadTelegramDialog
 from .prepare import PrepareContainerDialog
 from .settings_dialog import SettingsDialog
 from .style import QSS
+
+
+def _widen_messagebox(msg: QMessageBox, width: int) -> None:
+    """QMessageBox не слушает setMinimumWidth — расширяем через распорку в grid."""
+    layout = msg.layout()
+    if isinstance(layout, QGridLayout):
+        spacer = QSpacerItem(width, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
 
 
 class MainWindow(QMainWindow):
@@ -65,8 +77,8 @@ class MainWindow(QMainWindow):
         self.board = QWidget()
         self.board.setObjectName("Board")
         self.rows_layout = QVBoxLayout(self.board)
-        self.rows_layout.setContentsMargins(22, 20, 22, 20)
-        self.rows_layout.setSpacing(12)
+        self.rows_layout.setContentsMargins(16, 16, 16, 16)
+        self.rows_layout.setSpacing(10)
         self.rows_layout.addStretch(1)  # прижимаем строки к верху
         self.scroll.setWidget(self.board)
         outer.addWidget(self.scroll, 1)
@@ -80,16 +92,16 @@ class MainWindow(QMainWindow):
     def _header(self) -> QWidget:
         header = QWidget()
         header.setObjectName("Header")
-        header.setFixedHeight(74)
+        header.setFixedHeight(58)
         lay = QHBoxLayout(header)
-        lay.setContentsMargins(22, 12, 22, 12)
-        lay.setSpacing(14)
+        lay.setContentsMargins(20, 10, 20, 10)
+        lay.setSpacing(12)
 
         logo = QLabel()
-        icon = paths.icon_path()
-        if os.path.exists(icon):
-            logo.setPixmap(QPixmap(icon).scaled(
-                44, 44, Qt.AspectRatioMode.KeepAspectRatio,
+        mark = paths.logo_mark_path()
+        if os.path.exists(mark):
+            logo.setPixmap(QPixmap(mark).scaled(
+                36, 36, Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation))
         lay.addWidget(logo)
 
@@ -97,6 +109,9 @@ class MainWindow(QMainWindow):
         titles.setSpacing(0)
         t = QLabel(APP_NAME)
         t.setObjectName("AppTitle")
+        tf = t.font()
+        tf.setLetterSpacing(tf.SpacingType.AbsoluteSpacing, 1.2)
+        t.setFont(tf)
         s = QLabel("Менеджер Telegram-контейнеров")
         s.setObjectName("AppSubtitle")
         titles.addWidget(t)
@@ -118,16 +133,28 @@ class MainWindow(QMainWindow):
         w = QWidget()
         lay = QVBoxLayout(w)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.setSpacing(10)
+        lay.setSpacing(12)
 
-        icon = paths.icon_path()
-        if os.path.exists(icon):
+        # Знак в графитовой рамке (не голубая плитка)
+        mark_frame = QFrame()
+        mark_frame.setObjectName("EmptyMark")
+        mark_frame.setFixedSize(88, 88)
+        mf = QVBoxLayout(mark_frame)
+        mf.setContentsMargins(0, 0, 0, 0)
+        mf.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        mark = paths.logo_mark_path()
+        if os.path.exists(mark):
             img = QLabel()
-            img.setPixmap(QPixmap(icon).scaled(
-                96, 96, Qt.AspectRatioMode.KeepAspectRatio,
+            img.setPixmap(QPixmap(mark).scaled(
+                44, 44, Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation))
             img.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lay.addWidget(img)
+            mf.addWidget(img)
+        mwrap = QHBoxLayout()
+        mwrap.addStretch(1)
+        mwrap.addWidget(mark_frame)
+        mwrap.addStretch(1)
+        lay.addLayout(mwrap)
 
         title = QLabel("Пока нет контейнеров")
         title.setObjectName("EmptyTitle")
@@ -227,6 +254,7 @@ class MainWindow(QMainWindow):
         del_data = msg.addButton("Удалить с данными", QMessageBox.ButtonRole.DestructiveRole)
         keep_data = msg.addButton("Удалить, папку оставить", QMessageBox.ButtonRole.AcceptRole)
         cancel = msg.addButton("Отмена", QMessageBox.ButtonRole.RejectRole)
+        _widen_messagebox(msg, 540)
         msg.exec()
         clicked = msg.clickedButton()
         if clicked is cancel:

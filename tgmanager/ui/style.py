@@ -1,146 +1,228 @@
-"""Тёмная тема оформления (QSS) для TG Manager."""
+"""Тёмная тема TG Manager. Палитра и размеры — язык SCARP.CC.
 
-# Палитра
-BG = "#0f141a"
-BG_ELEV = "#171e27"
-CARD = "#1b2531"
-CARD_HOVER = "#202c3a"
-BORDER = "#273241"
-TEXT = "#e8eef5"
-TEXT_DIM = "#8a99ad"
-ACCENT = "#2AABEE"
-ACCENT_HOVER = "#39b6f5"
-ACCENT_PRESSED = "#1f97d6"
-GREEN = "#3ddc84"
-RED = "#ff5c5c"
-DANGER = "#e5484d"
+Токены сняты с SCARP.CC (SCARPCC-NEW/web/css/style.css :root).
+Все цвета/радиусы объявлены здесь; другие модули импортируют эти токены,
+а не хардкодят HEX.
+"""
+
+# ---- Поверхности (нейтральный графит, без navy) ----
+BG = "#0A0A0A"           # окно, поля ввода
+BG_SIDE = "#0F0F0F"      # шапка, статусбар
+BG_CARD = "#141414"      # строка, панель, модалка
+BG_CARD2 = "#181818"     # карточка группы настроек (чуть выше)
+BG_HOVER = "#1A1A1A"     # hover строки/кнопки
+
+# ---- Контуры ----
+BORDER = "#1E1E1E"
+BORDER_LIGHT = "#2A2A2A"
+
+# ---- Текст ----
+TEXT = "#D4D4D4"
+TEXT_SEC = "#A3A3A3"
+TEXT_MUTED = "#737373"
+TEXT_WHITE = "#FFFFFF"
+
+# ---- Акцент (единственный — белый) ----
+ACCENT = "#FFFFFF"
+ACCENT_HOVER = "#E0E0E0"
+ACCENT_PRESSED = "#D0D0D0"
+ACCENT_INK = "#000000"
+ACCENT_DISABLED = "#3A3A3A"
+
+# ---- Семантика ----
+GREEN = "#4ADE80"
+GREEN_BG = "#141C16"
+RED = "#F87171"
+RED_BG = "#1C1414"
+YELLOW = "#FBBF24"
+YELLOW_BG = "#1C1810"
+
+# ---- Радиусы ----
+RADIUS = "6px"      # карточка/диалог/панель
+RADIUS_SM = "4px"   # кнопка/инпут/пилюля
+RADIUS_PILL = "4px"
 
 QSS = f"""
 * {{
     font-family: "Inter", "Segoe UI", "Ubuntu", "Cantarell", sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     color: {TEXT};
     outline: none;
 }}
 
-QMainWindow, QDialog {{
-    background: {BG};
-}}
+QMainWindow, QWidget#Board {{ background: {BG}; }}
+QDialog {{ background: {BG_CARD}; }}
 
 /* ---- Шапка ---- */
 #Header {{
-    background: {BG_ELEV};
+    background: {BG_SIDE};
     border-bottom: 1px solid {BORDER};
 }}
 #AppTitle {{
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 700;
-    color: {TEXT};
+    color: {TEXT_WHITE};
 }}
 #AppSubtitle {{
     font-size: 12px;
-    color: {TEXT_DIM};
+    color: {TEXT_MUTED};
+}}
+#DialogTitle {{
+    font-size: 14px;
+    font-weight: 600;
+    color: {TEXT_WHITE};
 }}
 
-/* ---- Область прокрутки ---- */
+/* ---- Прокрутка ---- */
 QScrollArea {{ border: none; background: {BG}; }}
-#Board {{ background: {BG}; }}
-
-QScrollBar:vertical {{
-    background: transparent; width: 10px; margin: 4px;
-}}
-QScrollBar::handle:vertical {{
-    background: {BORDER}; border-radius: 5px; min-height: 30px;
-}}
-QScrollBar::handle:vertical:hover {{ background: #33445a; }}
+QScrollBar:vertical {{ background: transparent; width: 10px; margin: 4px; }}
+QScrollBar::handle:vertical {{ background: {BORDER_LIGHT}; border-radius: 5px; min-height: 30px; }}
+QScrollBar::handle:vertical:hover {{ background: #333333; }}
 QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
 QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
 
 /* ---- Кнопки ---- */
 QPushButton {{
-    background: {BG_ELEV};
+    background: {BG_CARD};
     border: 1px solid {BORDER};
-    border-radius: 9px;
-    padding: 8px 14px;
-    color: {TEXT};
+    border-radius: {RADIUS_SM};
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: {TEXT_SEC};
 }}
-QPushButton:hover {{ background: {CARD_HOVER}; border-color: #33445a; }}
-QPushButton:pressed {{ background: {CARD}; }}
-QPushButton:disabled {{ color: {TEXT_DIM}; background: {BG_ELEV}; }}
+QPushButton:hover {{ background: {BG_HOVER}; border-color: {BORDER_LIGHT}; color: {TEXT}; }}
+QPushButton:pressed {{ background: {BG_CARD}; }}
+QPushButton:disabled {{ color: {TEXT_MUTED}; background: {BG_CARD}; border-color: {BORDER}; }}
 
-QPushButton#Primary {{
-    background: {ACCENT}; border: none; color: #ffffff; font-weight: 600;
+/* Primary / Launch — единственная белая заливка */
+QPushButton#Primary, QPushButton#Launch {{
+    background: {ACCENT}; border: none; color: {ACCENT_INK}; font-weight: 600;
 }}
-QPushButton#Primary:hover {{ background: {ACCENT_HOVER}; }}
-QPushButton#Primary:pressed {{ background: {ACCENT_PRESSED}; }}
+QPushButton#Primary:hover, QPushButton#Launch:hover {{ background: {ACCENT_HOVER}; }}
+QPushButton#Primary:pressed, QPushButton#Launch:pressed {{ background: {ACCENT_PRESSED}; }}
+QPushButton#Primary:disabled, QPushButton#Launch:disabled {{
+    background: {ACCENT_DISABLED}; color: {TEXT_MUTED};
+}}
 
-QPushButton#Launch {{
-    background: {ACCENT}; border: none; color: #ffffff; font-weight: 600;
+/* Ghost / secondary */
+QPushButton#Ghost {{
+    background: {BG_CARD}; border: 1px solid {BORDER}; color: {TEXT_SEC};
 }}
-QPushButton#Launch:hover {{ background: {ACCENT_HOVER}; }}
-QPushButton#Launch:disabled {{ background: #1c2a38; color: #5b6a7d; }}
+QPushButton#Ghost:hover {{ background: {BG_HOVER}; border-color: {BORDER_LIGHT}; color: {TEXT}; }}
+
+/* Stop — контурная красная, тише primary */
 QPushButton#Stop {{
     background: transparent; border: 1px solid {RED}; color: {RED}; font-weight: 600;
 }}
-QPushButton#Stop:hover {{ background: rgba(255,92,92,0.12); }}
-QPushButton#Stop:disabled {{ border: 1px solid {BORDER}; color: #5b6a7d; background: transparent; }}
+QPushButton#Stop:hover {{ background: {RED_BG}; }}
+QPushButton#Stop:disabled {{ background: {BG_CARD}; border: 1px solid {BORDER}; color: {TEXT_MUTED}; }}
 
-QPushButton#Ghost {{
-    background: transparent; border: 1px solid {BORDER}; padding: 7px 10px;
-}}
-QPushButton#Ghost:hover {{ background: {CARD_HOVER}; }}
+/* Danger (корзина) — масса как Ghost, не аварийная */
 QPushButton#Danger {{
-    background: transparent; border: 1px solid {DANGER}; color: {DANGER};
+    background: {BG_CARD}; border: 1px solid {BORDER}; color: {RED};
 }}
-QPushButton#Danger:hover {{ background: rgba(229,72,77,0.12); }}
+QPushButton#Danger:hover {{ background: {RED_BG}; border-color: {BORDER_LIGHT}; color: {RED}; }}
 
 /* ---- Строка контейнера ---- */
 #Row {{
-    background: {CARD};
+    background: {BG_CARD};
     border: 1px solid {BORDER};
-    border-radius: 12px;
+    border-radius: {RADIUS};
 }}
-#Row:hover {{ background: {CARD_HOVER}; border-color: #31435a; }}
-#RowName {{ font-size: 15px; font-weight: 700; color: {TEXT}; }}
-#RowMeta {{ font-size: 12px; color: {TEXT_DIM}; }}
-#AccentBar {{ border-radius: 3px; }}
+#Row:hover {{ background: {BG_HOVER}; border-color: {BORDER_LIGHT}; }}
+#RowName {{ font-size: 13px; font-weight: 700; color: {TEXT}; }}
+#RowMeta {{ font-size: 12px; color: {TEXT_SEC}; }}
+#AccentBar {{ border-radius: 2px; }}
 
+/* ---- Пилюли статуса ---- */
 #PillRunning {{
-    background: rgba(61,220,132,0.15); color: {GREEN};
-    border-radius: 10px; padding: 2px 10px; font-size: 12px; font-weight: 600;
+    background: {GREEN_BG}; color: {GREEN};
+    border-radius: {RADIUS_PILL}; padding: 3px 8px; font-size: 11px; font-weight: 600;
 }}
 #PillStopped {{
-    background: rgba(138,153,173,0.12); color: {TEXT_DIM};
-    border-radius: 10px; padding: 2px 10px; font-size: 12px; font-weight: 600;
+    background: {BG_HOVER}; color: {TEXT_SEC};
+    border-radius: {RADIUS_PILL}; padding: 3px 8px; font-size: 11px; font-weight: 600;
 }}
 
 /* ---- Поля ввода ---- */
 QLineEdit, QComboBox, QSpinBox, QPlainTextEdit {{
     background: {BG};
     border: 1px solid {BORDER};
-    border-radius: 9px;
-    padding: 8px 10px;
-    selection-background-color: {ACCENT};
+    border-radius: {RADIUS_SM};
+    padding: 8px 12px;
+    min-height: 18px;
+    color: {TEXT};
+    selection-background-color: {BORDER_LIGHT};
+    selection-color: {TEXT_WHITE};
 }}
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QPlainTextEdit:focus {{
-    border-color: {ACCENT};
+    border-color: {BORDER_LIGHT};
 }}
-QComboBox::drop-down {{ border: none; width: 26px; }}
+QComboBox::drop-down {{ border: none; width: 22px; }}
 QComboBox QAbstractItemView {{
-    background: {BG_ELEV}; border: 1px solid {BORDER};
-    selection-background-color: {ACCENT}; padding: 4px;
+    background: {BG_CARD}; border: 1px solid {BORDER};
+    selection-background-color: {BG_HOVER}; selection-color: {TEXT_WHITE}; padding: 4px;
 }}
-QLabel#FieldLabel {{ color: {TEXT_DIM}; font-size: 12px; }}
-QLabel#Hint {{ color: {TEXT_DIM}; font-size: 12px; }}
-QLabel#WarnLabel {{ color: #ffb454; font-size: 12px; }}
 
-/* ---- Разное ---- */
-QToolTip {{
-    background: {BG_ELEV}; color: {TEXT};
-    border: 1px solid {BORDER}; border-radius: 6px; padding: 6px;
+/* ---- Лейблы/хинты ---- */
+QLabel#FieldLabel {{
+    color: {TEXT_MUTED}; font-size: 11px; font-weight: 600;
 }}
-QCheckBox {{ spacing: 8px; }}
-#EmptyTitle {{ font-size: 18px; font-weight: 700; color: {TEXT}; }}
-#EmptyText {{ font-size: 13px; color: {TEXT_DIM}; }}
-QStatusBar {{ background: {BG_ELEV}; color: {TEXT_DIM}; border-top: 1px solid {BORDER}; }}
+QLabel#Hint {{ color: {TEXT_MUTED}; font-size: 12px; }}
+QLabel#WarnLabel {{ color: {YELLOW}; font-size: 12px; }}
+
+/* ---- Настройки: карточка группы ---- */
+#SettingsCard {{
+    background: {BG_CARD2};
+    border: 1px solid {BORDER};
+    border-radius: {RADIUS};
+}}
+
+/* ---- Пустое состояние ---- */
+#EmptyMark {{
+    background: {BG_CARD};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+}}
+#EmptyTitle {{ font-size: 17px; font-weight: 700; color: {TEXT_WHITE}; }}
+#EmptyText {{ font-size: 13px; color: {TEXT_MUTED}; }}
+
+/* ---- Прогресс ---- */
+QProgressBar {{
+    background: {BORDER};
+    border: none;
+    border-radius: 3px;
+    min-height: 6px;
+    max-height: 6px;
+    text-align: center;
+}}
+QProgressBar::chunk {{ background: {ACCENT}; border-radius: 3px; }}
+
+QPlainTextEdit#Log {{
+    background: {BG}; border: 1px solid {BORDER}; border-radius: {RADIUS_SM};
+    font-size: 12px; color: {TEXT_SEC};
+}}
+
+/* ---- Чекбокс ---- */
+QCheckBox {{ spacing: 8px; color: {TEXT}; }}
+QCheckBox::indicator {{
+    width: 16px; height: 16px; border: 1px solid {BORDER_LIGHT};
+    border-radius: 3px; background: {BG};
+}}
+QCheckBox::indicator:checked {{ background: {ACCENT}; border-color: {ACCENT}; }}
+
+/* ---- Тултипы ---- */
+QToolTip {{
+    background: {BG_CARD}; color: {TEXT};
+    border: 1px solid {BORDER}; border-radius: 4px; padding: 6px;
+}}
+
+/* ---- Статусбар ---- */
+QStatusBar {{ background: {BG_SIDE}; color: {TEXT_MUTED}; border-top: 1px solid {BORDER}; }}
+
+/* ---- Модальные окна QMessageBox ---- */
+QMessageBox {{ background: {BG_CARD}; }}
+QMessageBox QLabel {{ color: {TEXT}; }}
+QMessageBox QPushButton {{ min-width: 84px; }}
 """

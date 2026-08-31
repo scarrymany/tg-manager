@@ -5,12 +5,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
+    QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -25,6 +25,7 @@ from ..models import (
     Proxy,
     parse_proxy_line,
 )
+from .style import GREEN, YELLOW
 
 
 class AccountDialog(QDialog):
@@ -43,7 +44,7 @@ class AccountDialog(QDialog):
         root.setSpacing(16)
 
         title = QLabel("Изменить контейнер" if self.editing else "Новый контейнер")
-        title.setObjectName("AppTitle")
+        title.setObjectName("DialogTitle")
         root.addWidget(title)
 
         form = QFormLayout()
@@ -114,16 +115,17 @@ class AccountDialog(QDialog):
         hint.setWordWrap(True)
         root.addWidget(hint)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        save_btn = buttons.button(QDialogButtonBox.StandardButton.Save)
+        btns = QHBoxLayout()
+        btns.addStretch(1)
+        cancel_btn = QPushButton("Отмена")
+        cancel_btn.setObjectName("Ghost")
+        cancel_btn.clicked.connect(self.reject)
+        save_btn = QPushButton("Сохранить")
         save_btn.setObjectName("Primary")
-        save_btn.setText("Сохранить")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Отмена")
-        buttons.accepted.connect(self._accept)
-        buttons.rejected.connect(self.reject)
-        root.addWidget(buttons)
+        save_btn.clicked.connect(self._accept)
+        btns.addWidget(cancel_btn)   # Ghost слева
+        btns.addWidget(save_btn)     # Primary справа
+        root.addLayout(btns)
 
     # ---- helpers ----
     def _lbl(self, text: str) -> QLabel:
@@ -155,7 +157,7 @@ class AccountDialog(QDialog):
         parsed = parse_proxy_line(text)
         if not parsed:
             self.line_hint.setText("⚠ Не распознано. Формат: host:port:логин:пароль")
-            self.line_hint.setStyleSheet("color:#ffb454;")
+            self.line_hint.setStyleSheet(f"color:{YELLOW};")
             return
         host, port, user, password = parsed
         # если тип не выбран — по умолчанию SOCKS5 (частый формат для таких строк)
@@ -166,7 +168,7 @@ class AccountDialog(QDialog):
         self.user_edit.setText(user)
         self.pass_edit.setText(password)
         self.line_hint.setText("✓ Распознано и подставлено ниже")
-        self.line_hint.setStyleSheet("color:#3ddc84;")
+        self.line_hint.setStyleSheet(f"color:{GREEN};")
 
     # ---- data ----
     def _load(self) -> None:

@@ -35,7 +35,7 @@ class DownloadTelegramDialog(QDialog):
         root.setSpacing(12)
 
         title = QLabel("Скачивание переносного Telegram")
-        title.setObjectName("AppTitle")
+        title.setObjectName("DialogTitle")
         root.addWidget(title)
 
         sub = QLabel("Официальный Telegram Desktop будет установлен в папку программы "
@@ -50,6 +50,7 @@ class DownloadTelegramDialog(QDialog):
         root.addWidget(self.bar)
 
         self.log = QPlainTextEdit()
+        self.log.setObjectName("Log")
         self.log.setReadOnly(True)
         self.log.setFixedHeight(150)
         root.addWidget(self.log)
