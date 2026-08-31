@@ -63,7 +63,7 @@ Comment=Менеджер Telegram-контейнеров (tdata)
 Exec=$DIR/run.sh
 Icon=$APP_ID
 Terminal=false
-Categories=Network;Utility;
+Categories=Network;
 StartupWMClass=$APP_ID
 EOF
 
