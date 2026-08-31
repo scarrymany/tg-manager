@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 from .. import paths
 from ..config import Settings
 from ..telegram import is_snap, resolve_proxychains, resolve_telegram
+from .download import DownloadTelegramDialog
 
 
 class SettingsDialog(QDialog):
@@ -48,7 +49,7 @@ class SettingsDialog(QDialog):
         tg_row = QHBoxLayout()
         tg_row.setSpacing(8)
         self.tg_edit = QLineEdit(self.settings.telegram_binary)
-        self.tg_edit.setPlaceholderText("Автоопределение (переносной внутри программы → системный)")
+        self.tg_edit.setPlaceholderText("Автоопределение: переносной Telegram внутри программы")
         self.tg_edit.textChanged.connect(self._refresh_status)
         browse = QPushButton("Обзор…")
         browse.setObjectName("Ghost")
@@ -68,18 +69,12 @@ class SettingsDialog(QDialog):
 
         # Скачать переносной Telegram
         dl_row = QHBoxLayout()
-        self.dl_btn = QPushButton("⬇  Скачать переносной Telegram (рекомендуется для прокси)")
+        self.dl_btn = QPushButton("⬇  Скачать переносной Telegram")
         self.dl_btn.setObjectName("Primary")
         self.dl_btn.clicked.connect(self._download_telegram)
         dl_row.addWidget(self.dl_btn)
         dl_row.addStretch(1)
         root.addLayout(dl_row)
-
-        self.dl_log = QPlainTextEdit()
-        self.dl_log.setReadOnly(True)
-        self.dl_log.setFixedHeight(120)
-        self.dl_log.setVisible(False)
-        root.addWidget(self.dl_log)
 
         # --- proxychains ---
         root.addWidget(self._section("proxychains (для HTTP/SOCKS5 прокси)"))
@@ -157,13 +152,14 @@ class SettingsDialog(QDialog):
     def _refresh_status(self) -> None:
         tg = resolve_telegram(self.tg_edit.text().strip())
         if not tg:
-            self.tg_status.setText("⚠ Telegram не найден. Скачайте переносной или укажите путь.")
+            self.tg_status.setText("⚠ Переносной Telegram не установлен — нажмите "
+                                   "«Скачать переносной Telegram».")
             self.tg_status.setStyleSheet("color:#ffb454;")
         elif is_snap(tg):
             self.tg_status.setText(
-                f"Найден (snap): {tg}\n"
-                "⚠ Через snap прокси (proxychains) НЕ работает. "
-                "Для прокси скачайте переносной Telegram."
+                f"⚠ Указан snap: {tg}\n"
+                "Через snap прокси (proxychains) НЕ работает. "
+                "Уберите путь, чтобы использовать переносной Telegram."
             )
             self.tg_status.setStyleSheet("color:#ffb454;")
         else:
@@ -179,37 +175,12 @@ class SettingsDialog(QDialog):
             self.pc_status.setStyleSheet("color:#ffb454;")
 
     def _download_telegram(self) -> None:
-        if self._proc is not None:
-            return
-        script = os.path.join(paths.APP_ROOT, "get_telegram.sh")
-        if not os.path.exists(script):
-            self.dl_log.setVisible(True)
-            self.dl_log.appendPlainText("Не найден get_telegram.sh рядом с программой.")
-            return
-        self.dl_log.setVisible(True)
-        self.dl_log.clear()
-        self.dl_log.appendPlainText("Скачивание переносного Telegram…")
-        self.dl_btn.setEnabled(False)
-        self._proc = QProcess(self)
-        self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self._proc.readyReadStandardOutput.connect(self._read_dl)
-        self._proc.finished.connect(self._dl_finished)
-        self._proc.start("bash", [script])
-
-    def _read_dl(self) -> None:
-        if not self._proc:
-            return
-        data = bytes(self._proc.readAllStandardOutput()).decode("utf-8", "replace")
-        self.dl_log.appendPlainText(data.rstrip())
-
-    def _dl_finished(self, code: int, _status) -> None:
-        self.dl_btn.setEnabled(True)
-        self._proc = None
-        if code == 0 and os.path.exists(paths.BUNDLED_TELEGRAM_BIN):
-            self.dl_log.appendPlainText("✓ Готово. Переносной Telegram установлен в программу.")
-            self.tg_edit.setText(paths.BUNDLED_TELEGRAM_BIN)
-        else:
-            self.dl_log.appendPlainText(f"✗ Не удалось (код {code}). Проверьте интернет.")
+        dlg = DownloadTelegramDialog(self)
+        dlg.exec()
+        if dlg.succeeded:
+            # оставляем автоопределение (пустое поле) — bundled подхватится сам
+            if self.tg_edit.text().strip() and not os.path.exists(self.tg_edit.text().strip()):
+                self.tg_edit.clear()
         self._refresh_status()
 
     def _save(self) -> None:

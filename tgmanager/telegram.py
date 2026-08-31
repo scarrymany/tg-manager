@@ -57,9 +57,21 @@ def detect_proxychains() -> Optional[str]:
 
 
 def resolve_telegram(configured: str = "") -> Optional[str]:
+    """Определяет бинарь для запуска.
+
+    Приоритет: явно указанный в настройках путь → ТОЛЬКО переносной внутри
+    программы. Системный/snap Telegram НЕ используется по умолчанию,
+    чтобы работал прокси и поведение было предсказуемым.
+    """
     if configured and os.path.exists(configured):
         return configured
-    return detect_telegram()
+    if os.path.exists(paths.BUNDLED_TELEGRAM_BIN) and os.access(paths.BUNDLED_TELEGRAM_BIN, os.X_OK):
+        return paths.BUNDLED_TELEGRAM_BIN
+    return None
+
+
+def bundled_exists() -> bool:
+    return os.path.exists(paths.BUNDLED_TELEGRAM_BIN) and os.access(paths.BUNDLED_TELEGRAM_BIN, os.X_OK)
 
 
 def resolve_proxychains(configured: str = "") -> Optional[str]:
@@ -110,8 +122,8 @@ def build_launch_plan(settings, account: Account) -> LaunchPlan:
     tg = resolve_telegram(settings.telegram_binary)
     if not tg:
         return LaunchPlan(argv=[], workdir=workdir, tg_binary="",
-                          error="Не найден Telegram. Укажите путь в настройках "
-                                "или скачайте переносной Telegram.")
+                          error="Переносной Telegram не установлен. Нажмите «Скачать "
+                                "переносной Telegram» (в настройках или при запуске).")
 
     base_args = [tg, "-workdir", workdir]
     if settings.allow_many:

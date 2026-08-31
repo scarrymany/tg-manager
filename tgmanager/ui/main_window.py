@@ -19,9 +19,10 @@ from PyQt6.QtWidgets import (
 from .. import APP_NAME, __version__, launcher, paths
 from ..config import Store
 from ..models import Account
-from ..telegram import build_launch_plan
+from ..telegram import build_launch_plan, resolve_telegram
 from .account_dialog import AccountDialog
 from .card import AccountCard
+from .download import DownloadTelegramDialog
 from .flow_layout import FlowLayout
 from .settings_dialog import SettingsDialog
 from .style import QSS
@@ -238,6 +239,23 @@ class MainWindow(QMainWindow):
         if launcher.is_running(workdir):
             self.statusBar().showMessage("Аккаунт уже запущен", 4000)
             return
+
+        # Переносной Telegram обязателен — если его нет, предлагаем скачать
+        if not resolve_telegram(self.store.settings.telegram_binary):
+            r = QMessageBox.question(
+                self, "Нужен переносной Telegram",
+                "Для запуска используется переносной Telegram, и он ещё не установлен.\n"
+                "Скачать официальный Telegram Desktop сейчас (~50 МБ)?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if r != QMessageBox.StandardButton.Yes:
+                return
+            dlg = DownloadTelegramDialog(self)
+            dlg.exec()
+            if not dlg.succeeded:
+                self.statusBar().showMessage("Переносной Telegram не установлен", 5000)
+                return
 
         # Предупреждение об отсутствии tdata
         if not os.path.isdir(paths.account_tdata(account_id)):
