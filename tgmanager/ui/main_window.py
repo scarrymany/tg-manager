@@ -451,13 +451,27 @@ class MainWindow(QMainWindow):
     def stop_account(self, account_id: str) -> None:
         account = self.store.get(account_id)
         workdir = paths.account_workdir(account_id)
-        n = launcher.stop(workdir)
-        if n:
-            self.statusBar().showMessage(
-                f"Остановлен: {account.name if account else account_id}", 4000)
+        launcher.stop(workdir, force=True)
         card = self.cards.get(account_id)
-        if card:
-            QTimer.singleShot(800, lambda: card.set_running(launcher.is_running(workdir)))
+
+        def _apply(attempt: int = 0) -> None:
+            alive = launcher.is_running(workdir)
+            if alive and attempt < 8:
+                if attempt in (2, 5):
+                    launcher.stop(workdir, force=True)
+                QTimer.singleShot(200, lambda: _apply(attempt + 1))
+                return
+            if card:
+                card.set_running(alive)
+            if alive:
+                self.statusBar().showMessage(
+                    "Telegram не завершился. Закройте его из трея: Quit Telegram.",
+                    8000,
+                )
+            elif account:
+                self.statusBar().showMessage(f"Остановлен: {account.name}", 4000)
+
+        _apply(0)
 
     def automate_account(self, account_id: str) -> None:
         account = self.store.get(account_id)

@@ -131,6 +131,10 @@ def launch(plan: LaunchPlan) -> Optional[int]:
 
 
 def stop(workdir: str, force: bool = False) -> int:
+    # На Windows Telegram Desktop перехватывает WM_CLOSE и уходит в трей —
+    # останавливаем всегда через TerminateProcess / taskkill /F.
+    if os.name == "nt":
+        force = True
     return proc.terminate(workdir, kill=force)
 
 
