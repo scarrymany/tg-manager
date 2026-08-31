@@ -1,0 +1,15 @@
+# Переносной Telegram (скачивается отдельно, большой)
+/telegram/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Логи и локальные данные
+*.log
+launch.log
+
+# Редакторы
+.vscode/
+.idea/
