@@ -104,28 +104,57 @@ async def _safe(coro_factory, label: str):
 
 
 async def _collect(client, me_id, cats):
-    """Собрать цели из ВСЕХ папок (основная + архив), дедуп по id."""
+    """Собрать цели из ВСЕХ папок (основная + архив), дедуп по id.
+
+    Обход устойчив к обрывам (особенно через прокси): при ошибке повторяем
+    обход папки, дедуп по id накапливает уже полученное.
+    """
+    from telethon import errors
     seen = set()
     targets = []
     counts = {"channels": 0, "groups": 0, "private": 0, "bots": 0}
+    all_dialogs = 0
     for folder in (0, 1):  # 0 = основная, 1 = архив
-        async for d in client.iter_dialogs(folder=folder):
-            if d.id in seen:
-                continue
-            seen.add(d.id)
-            cat = categorize(d, me_id)
-            if cat and cat in cats:
-                targets.append((cat, d))
-                counts[cat] = counts.get(cat, 0) + 1
+        for attempt in range(6):
+            try:
+                async for d in client.iter_dialogs(folder=folder):
+                    if d.id in seen:
+                        continue
+                    seen.add(d.id)
+                    all_dialogs += 1
+                    cat = categorize(d, me_id)
+                    if cat and cat in cats:
+                        targets.append((cat, d))
+                        counts[cat] = counts.get(cat, 0) + 1
+                break  # папка обойдена целиком
+            except errors.FloodWaitError as e:
+                emit({"type": "flood", "seconds": int(e.seconds), "label": "Сканирование"})
+                await asyncio.sleep(int(e.seconds) + 2)
+            except (errors.RPCError, ConnectionError, OSError, asyncio.TimeoutError):
+                emit({"type": "warn", "label": "Сканирование",
+                      "error": f"обрыв, повтор обхода (папка {folder})"})
+                await asyncio.sleep(2)
     return targets, counts
 
 
 async def _delete_dialog(client, cat, d, revoke) -> bool:
-    """Удалить/покинуть один диалог. True — успех, False — ошибка (не повторять)."""
+    """Удалить/покинуть один диалог. True — успех, False — ошибка (не повторять).
+
+    Ботов дополнительно БЛОКИРУЕМ: иначе бот пришлёт новое сообщение и диалог
+    снова всплывёт в списке (боты-кликеры так и делают).
+    """
     from telethon import errors
+    from telethon.tl.functions.contacts import BlockRequest
     label = getattr(d, "name", None) or str(getattr(d, "id", ""))
     while True:
         try:
+            if cat == "bots":
+                try:
+                    await client(BlockRequest(id=d.entity))
+                except errors.FloodWaitError:
+                    raise
+                except errors.RPCError:
+                    pass  # блок не критичен, продолжаем удаление
             await client.delete_dialog(d.entity, revoke=(revoke and cat == "private"))
             return True
         except errors.FloodWaitError as e:
@@ -172,7 +201,12 @@ async def run(args) -> int:
     emit({"type": "stage", "msg": f"Подключение к Telegram ({proxy_human})…"})
     # session=None → Telethon делает in-memory сессию (без файла). Передавать
     # StringSession-объект нельзя: в opentele баг (UnboundLocalError auth_session).
-    to_telethon_kwargs = {"session": None, "flag": UseCurrentSession}
+    to_telethon_kwargs = {
+        "session": None, "flag": UseCurrentSession,
+        # устойчивость (особенно через прокси): не терять диалоги на обрывах
+        "connection_retries": 8, "request_retries": 8, "retry_delay": 2,
+        "timeout": 30, "auto_reconnect": True,
+    }
     if proxy is not None:
         to_telethon_kwargs["proxy"] = proxy
     client = await tdesk.ToTelethon(**to_telethon_kwargs)
@@ -212,18 +246,26 @@ async def run(args) -> int:
                   "label": "Избранное", "cat": "saved"})
             await asyncio.sleep(THROTTLE)
 
-        # Диалоги — повторяем проходы (архив + повторы), пока не станет пусто
+        # Диалоги — повторяем проходы (архив + повторы), пока не станет пусто.
+        # Нужны ДВА пустых обхода подряд: одиночный «пусто» может быть неполным
+        # обходом (обрыв через прокси), и останавливаться на нём нельзя.
         passes = 0
+        empty_streak = 0
         while loop_cats:
             passes += 1
-            targets, _ = await _collect(client, me.id, loop_cats)
-            targets = [(c, d) for c, d in targets if d.id not in failed]
-            if not targets:
-                break
-            if passes > 15:
+            if passes > 60:
                 emit({"type": "warn", "label": "Проходы",
                       "error": "Достигнут лимит проходов — часть могла остаться"})
                 break
+            targets, _ = await _collect(client, me.id, loop_cats)
+            targets = [(c, d) for c, d in targets if d.id not in failed]
+            if not targets:
+                empty_streak += 1
+                if empty_streak >= 2:
+                    break
+                await asyncio.sleep(1.5)  # перепроверка полноты
+                continue
+            empty_streak = 0
             emit({"type": "stage", "msg": f"Проход {passes}: к удалению {len(targets)}"})
             total = max(total, done + len(targets))
             for cat, d in targets:
