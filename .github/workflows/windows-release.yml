@@ -41,7 +41,7 @@ jobs:
       - name: Worker deps
         run: |
           python -m pip install -U pip wheel
-          python -m pip install pyinstaller
+          python -m pip install pyinstaller Pillow
           python -m pip install "telethon>=1.36,<2" "opentele-ng>=1.4.0" "python-socks>=2.4" "tgcrypto-pyrofork>=1.2.7"
           python -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip PyQt6 PySide6 2>$null
           python -c "import opentele, telethon, python_socks; print('worker imports ok', opentele.__file__)"

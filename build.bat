@@ -34,7 +34,7 @@ if errorlevel 1 (
 )
 
 echo [1/5] Зависимости воркера
-%PY% -m pip install -U pip pyinstaller
+%PY% -m pip install -U pip pyinstaller Pillow
 %PY% -m pip install "telethon>=1.36,<2" "opentele-ng>=1.4.0" "python-socks>=2.4" "tgcrypto-pyrofork>=1.2.7"
 if errorlevel 1 goto :fail
 %PY% -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip >nul 2>&1
