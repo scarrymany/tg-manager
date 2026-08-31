@@ -22,6 +22,57 @@ CARD_COLORS = [
 ]
 
 
+def parse_proxy_line(line: str):
+    """Разбирает строку прокси в кортеж (host, port, user, password) или None.
+
+    Поддерживаются форматы:
+      host:port
+      host:port:user:pass
+      user:pass@host:port
+      scheme://user:pass@host:port  (scheme игнорируется)
+    """
+    if not line:
+        return None
+    s = line.strip()
+    if "://" in s:
+        s = s.split("://", 1)[1]
+
+    user = password = ""
+    host = ""
+    port = 0
+
+    if "@" in s:
+        creds, hostpart = s.rsplit("@", 1)
+        cparts = creds.split(":")
+        user = cparts[0] if cparts else ""
+        password = cparts[1] if len(cparts) > 1 else ""
+        hp = hostpart.split(":")
+        if len(hp) < 2:
+            return None
+        host = hp[0]
+        port_str = hp[1]
+    else:
+        parts = s.split(":")
+        if len(parts) == 2:
+            host, port_str = parts
+        elif len(parts) == 3:
+            host, port_str, user = parts
+        elif len(parts) >= 4:
+            host, port_str, user = parts[0], parts[1], parts[2]
+            password = ":".join(parts[3:])  # пароль может содержать ':'
+        else:
+            return None
+
+    host = host.strip()
+    try:
+        port = int(port_str.strip())
+    except (ValueError, AttributeError):
+        return None
+    if not host or not (1 <= port <= 65535):
+        return None
+    return host, port, user.strip(), password
+
+
 @dataclass
 class Proxy:
     type: str = PROXY_NONE

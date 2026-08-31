@@ -21,8 +21,11 @@
 ## Установка (одной командой)
 
 ```bash
-git clone https://github.com/USER/tg-manager.git && cd tg-manager && ./install.sh
+git clone https://github.com/scarrymany/tg-manager.git && cd tg-manager && ./install.sh
 ```
+
+> Репозиторий приватный — клонирование доступно из вашего аккаунта GitHub
+> (по HTTPS с токеном или по SSH).
 
 Установщик поставит зависимости (`python3-pyqt6`, `proxychains4`), создаст ярлык
 в меню приложений и подготовит запуск. После этого запускайте «TG Manager» из меню

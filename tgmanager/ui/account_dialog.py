@@ -23,6 +23,7 @@ from ..models import (
     PROXY_SOCKS5,
     Account,
     Proxy,
+    parse_proxy_line,
 )
 
 
@@ -68,6 +69,15 @@ class AccountDialog(QDialog):
         self.proxy_combo.addItem("SOCKS5", PROXY_SOCKS5)
         self.proxy_combo.currentIndexChanged.connect(self._toggle_proxy)
         form.addRow(self._lbl("Прокси"), self.proxy_combo)
+
+        # Быстрый ввод одной строкой
+        self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("host:port:логин:пароль  или  host:port")
+        self.line_edit.textChanged.connect(self._apply_line)
+        form.addRow(self._lbl("Строкой"), self.line_edit)
+        self.line_hint = QLabel("")
+        self.line_hint.setObjectName("Hint")
+        form.addRow("", self.line_hint)
 
         # host:port
         hp = QHBoxLayout()
@@ -136,6 +146,27 @@ class AccountDialog(QDialog):
         enabled = self.proxy_combo.currentData() != PROXY_NONE
         self.hp_row.setEnabled(enabled)
         self.up_row.setEnabled(enabled)
+
+    def _apply_line(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            self.line_hint.setText("")
+            return
+        parsed = parse_proxy_line(text)
+        if not parsed:
+            self.line_hint.setText("⚠ Не распознано. Формат: host:port:логин:пароль")
+            self.line_hint.setStyleSheet("color:#ffb454;")
+            return
+        host, port, user, password = parsed
+        # если тип не выбран — по умолчанию SOCKS5 (частый формат для таких строк)
+        if self.proxy_combo.currentData() == PROXY_NONE:
+            self.proxy_combo.setCurrentIndex(self.proxy_combo.findData(PROXY_SOCKS5))
+        self.host_edit.setText(host)
+        self.port_spin.setValue(port)
+        self.user_edit.setText(user)
+        self.pass_edit.setText(password)
+        self.line_hint.setText("✓ Распознано и подставлено ниже")
+        self.line_hint.setStyleSheet("color:#3ddc84;")
 
     # ---- data ----
     def _load(self) -> None:
