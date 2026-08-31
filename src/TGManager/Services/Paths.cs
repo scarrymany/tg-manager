@@ -1,5 +1,4 @@
 using System.IO;
-using System.Reflection;
 
 namespace TGManager.Services;
 
@@ -9,10 +8,11 @@ public static class Paths
 
     static Paths()
     {
-        var exe = Environment.ProcessPath
-                  ?? Assembly.GetExecutingAssembly().Location
-                  ?? AppContext.BaseDirectory;
-        AppRoot = Path.GetDirectoryName(Path.GetFullPath(exe)) ?? AppContext.BaseDirectory;
+        var exe = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(exe))
+            AppRoot = Path.GetDirectoryName(Path.GetFullPath(exe)) ?? AppContext.BaseDirectory;
+        else
+            AppRoot = Path.GetFullPath(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         try { Directory.SetCurrentDirectory(AppRoot); } catch { /* ignore */ }
     }
 
