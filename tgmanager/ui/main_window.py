@@ -24,6 +24,7 @@ from .account_dialog import AccountDialog
 from .card import AccountCard
 from .download import DownloadTelegramDialog
 from .flow_layout import FlowLayout
+from .prepare import PrepareContainerDialog
 from .settings_dialog import SettingsDialog
 from .style import QSS
 
@@ -178,10 +179,21 @@ class MainWindow(QMainWindow):
     # ---------- действия ----------
     def add_account(self) -> None:
         dlg = AccountDialog(self)
-        if dlg.exec():
-            self.store.add(dlg.result_account())
-            self.reload_cards()
-            self.statusBar().showMessage("Аккаунт создан", 4000)
+        if not dlg.exec():
+            return
+        account = dlg.result_account()
+        # Подготовка контейнера: папка + докачка переносного Telegram
+        prep = PrepareContainerDialog(self, account)
+        prep.exec()
+        self.store.add(account)
+        self.reload_cards()
+        if prep.succeeded:
+            self.statusBar().showMessage("Контейнер создан и подготовлен", 4000)
+        else:
+            self.statusBar().showMessage(
+                "Контейнер создан (переносной Telegram можно докачать позже)", 6000)
+        # Сразу открываем папку — чтобы положить tdata
+        self.open_folder(account.id)
 
     def edit_account(self, account_id: str) -> None:
         account = self.store.get(account_id)
