@@ -33,7 +33,10 @@ def pids_for_workdir(workdir: str) -> List[int]:
         cl = _cmdline(pid)
         if not cl:
             continue
-        if marker in cl and ("telegram" in cl.lower() or "-workdir" in cl):
+        # Именно инстанс Telegram с этой рабочей папкой.
+        # Важно: НЕ ловить наш воркер автоматизации (в его cmdline тоже есть workdir).
+        if (marker in cl and "telegram" in cl.lower()
+                and "tgmanager.automation" not in cl):
             found.append(pid)
     return found
 

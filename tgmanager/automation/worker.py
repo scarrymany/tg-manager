@@ -87,7 +87,6 @@ async def _safe(coro_factory, label: str):
 async def run(args) -> int:
     from opentele.td import TDesktop
     from opentele.api import UseCurrentSession
-    from telethon.sessions import StringSession
     from telethon.tl.functions.contacts import GetContactsRequest, DeleteContactsRequest
     from telethon.tl.functions.photos import DeletePhotosRequest
     from telethon.tl import types
@@ -110,7 +109,9 @@ async def run(args) -> int:
         return 2
 
     emit({"type": "stage", "msg": "Подключение к Telegram…"})
-    client = await tdesk.ToTelethon(session=StringSession(), flag=UseCurrentSession)
+    # session=None → Telethon делает in-memory сессию (без файла). Передавать
+    # StringSession-объект нельзя: в opentele баг (UnboundLocalError auth_session).
+    client = await tdesk.ToTelethon(session=None, flag=UseCurrentSession)
     client.flood_sleep_threshold = FLOOD_AUTOSLEEP
     await client.connect()
     try:
