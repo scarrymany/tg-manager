@@ -1,0 +1,245 @@
+<Window x:Class="TGManager.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:svc="clr-namespace:TGManager.Services"
+        xmlns:vm="clr-namespace:TGManager.ViewModels"
+        Title="TG Manager"
+        Width="1080" Height="720"
+        MinWidth="920" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize"
+        Background="Transparent"
+        Foreground="{StaticResource FgBrush}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        Closing="OnClosing">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="58"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="16"
+                      UseAeroCaptionButtons="False"
+                      NonClientFrameEdges="None"/>
+    </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <svc:BoolToVis x:Key="BoolToVis"/>
+        <svc:InvBoolToVis x:Key="InvBoolToVis"/>
+    </Window.Resources>
+
+    <Border x:Name="WindowFrame"
+            BorderBrush="{StaticResource HairlineBrush}"
+            BorderThickness="1"
+            Background="{StaticResource BgBrush}"
+            CornerRadius="16"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="58"/>
+                <RowDefinition Height="46"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="28"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title bar -->
+            <Border Grid.Row="0" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+                <Grid Margin="16,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Width="28" Height="28" Source="/Assets/logo_mark.png" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="TG Manager" FontSize="15" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/>
+                            <TextBlock Text="Менеджер Telegram-контейнеров" FontSize="11" Foreground="{StaticResource SubtleBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Content="＋  Добавить контейнер"
+                                Margin="0,0,8,0"
+                                Padding="14,8"
+                                Click="OnAddAccount"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button Style="{StaticResource GhostButton}"
+                                Content="⚙  Настройки"
+                                Margin="0,0,8,0"
+                                Click="OnOpenSettings"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button Style="{StaticResource ChromeButton}" Click="OnMinimize" ToolTip="Свернуть">
+                            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Data="M4,10 H16" Width="20" Height="20" Stretch="None"/>
+                        </Button>
+                        <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Click="OnMaximize" ToolTip="Развернуть">
+                            <Path x:Name="MaxIcon"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2"
+                                  Data="M5,5 H15 V15 H5 Z" Width="20" Height="20" Stretch="None"/>
+                        </Button>
+                        <Button Style="{StaticResource CloseButton}" Click="OnCloseClick" ToolTip="Закрыть">
+                            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20" Stretch="None"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Nav -->
+            <Border Grid.Row="1" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
+                    <Button x:Name="NavContainers" Style="{StaticResource GhostButton}" Tag="active"
+                            Content="Контейнеры" Click="OnNavContainers" Margin="0,0,8,0"/>
+                    <Button x:Name="NavTasks" Style="{StaticResource GhostButton}"
+                            Content="Активные задачи" Click="OnNavTasks"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Pages -->
+            <Grid Grid.Row="2">
+                <!-- Containers -->
+                <Grid x:Name="ContainersPage">
+                    <ScrollViewer x:Name="AccountsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding HasAccounts, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl x:Name="AccountList" Margin="16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:AccountVm}">
+                                    <Border Background="{StaticResource CardBrush}"
+                                            BorderBrush="{StaticResource HairlineBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Margin="0,0,0,10"
+                                            Height="60"
+                                            Padding="12,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="3" Height="36" CornerRadius="2" Background="{Binding ColorBrush}" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource FgBrush}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding MetaLeft}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="{Binding TdataLabel}" FontSize="12" Foreground="{Binding TdataBrush}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <Border Grid.Column="2" Background="{Binding StatusBg}" CornerRadius="4" Padding="8,3" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusFg}"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Width="104" Padding="0,8" Margin="0,0,6,0"
+                                                        IsEnabled="{Binding CanLaunch}" Tag="{Binding Id}" Click="OnLaunch"/>
+                                                <Button Style="{StaticResource StopButton}" Content="■  Стоп" Width="84" Padding="0,8" Margin="0,0,6,0"
+                                                        IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
+                                                <Button Style="{StaticResource GhostButton}" Content="📁  Папка" Width="96" Padding="0,8" Margin="0,0,6,0"
+                                                        Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку — сюда положите tdata"/>
+                                                <Button Style="{StaticResource IconButton}" Content="🧹" Tag="{Binding Id}" Click="OnCleanup"
+                                                        IsEnabled="{Binding CanCleanup}" ToolTip="Автоматизация (чистка)" Margin="0,0,6,0"/>
+                                                <Button Style="{StaticResource IconButton}" Content="✏" Tag="{Binding Id}" Click="OnEdit"
+                                                        ToolTip="Изменить" Margin="0,0,6,0"/>
+                                                <Button Style="{StaticResource DangerButton}" Width="34" Height="34" Padding="0" Content="🗑"
+                                                        Tag="{Binding Id}" Click="OnDelete" ToolTip="Удалить"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding HasAccounts, Converter={StaticResource InvBoolToVis}}">
+                        <Border Width="88" Height="88" CornerRadius="8" Background="{StaticResource CardBrush}"
+                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                            <Image Width="44" Height="44" Source="/Assets/logo_mark.png" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                        <TextBlock Text="Пока нет контейнеров" FontSize="17" FontWeight="Bold"
+                                   Foreground="{StaticResource FgWhiteBrush}" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                        <TextBlock Text="Создайте первый контейнер, дайте имя,&#x0a;а затем положите папку tdata в его папку."
+                                   TextAlignment="Center" Foreground="{StaticResource SubtleBrush}" Margin="0,8,0,16"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="＋  Создать контейнер"
+                                HorizontalAlignment="Center" Click="OnAddAccount"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Tasks -->
+                <Grid x:Name="TasksPage" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Margin="16,12,16,0">
+                        <TextBlock Text="Активные задачи" FontSize="17" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource GhostButton}" Content="Очистить завершённые" Click="OnClearFinished" Margin="0,0,8,0"/>
+                            <Button Style="{StaticResource DangerButton}" Content="Остановить все" Click="OnStopAll"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid Grid.Row="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding HasTasks, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl x:Name="TaskList" Margin="16">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:TaskVm}">
+                                        <Border Background="{StaticResource CardBrush}"
+                                                BorderBrush="{StaticResource HairlineBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Margin="0,0,0,10"
+                                                Height="66"
+                                                Padding="12,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="160"/>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="3" Height="42" CornerRadius="2" Background="{Binding ColorBrush}"/>
+                                                <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding SubLabel}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <ProgressBar Grid.Column="2" Height="6" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                             Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}"
+                                                             IsIndeterminate="{Binding IsIndeterminate}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding CountText}" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                                                <Border Grid.Column="4" Background="{StaticResource HoverBrush}" CornerRadius="4" Padding="8,3" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                    <TextBlock Text="{Binding PillText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding PillFg}"/>
+                                                </Border>
+                                                <Button Grid.Column="5" Style="{StaticResource GhostButton}" Content="Журнал" Width="84" Margin="0,0,6,0"
+                                                        Tag="{Binding Id}" Click="OnTaskLog"/>
+                                                <Button Grid.Column="6" Style="{StaticResource StopButton}" Content="{Binding ActionButtonText}" Width="84"
+                                                        Tag="{Binding Id}" Click="OnTaskAction"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку контейнера — задача появится здесь."
+                                   TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   Foreground="{StaticResource SubtleBrush}"
+                                   Visibility="{Binding HasTasks, Converter={StaticResource InvBoolToVis}}"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <Border Grid.Row="3" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
+                <TextBlock x:Name="StatusText" Text="TG Manager 1.1.0" Margin="16,0"
+                           VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource SubtleBrush}"/>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

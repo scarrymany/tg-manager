@@ -41,7 +41,9 @@ def _dispatch_worker() -> int | None:
     if "--tg-worker" in sys.argv:
         idx = sys.argv.index("--tg-worker")
         sys.argv = [sys.argv[0], *sys.argv[idx + 1:]]
+        from tgmanager.automation.worker import _force_utf8_stdio
         from tgmanager.automation.worker import main as worker_main
+        _force_utf8_stdio()
         return worker_main()
     if "--tg-http-bridge" in sys.argv:
         # http_bridge.main сам парсит argv — убираем только наш флаг

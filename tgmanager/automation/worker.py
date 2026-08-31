@@ -37,9 +37,60 @@ THROTTLE = 0.8  # пауза между действиями, сек (щадящ
 FLOOD_AUTOSLEEP = 24 * 3600  # Telethon сам ждёт FloodWait до суток
 
 
+def _force_utf8_stdio() -> None:
+    """Windows + frozen exe: stdout иначе cp1251/cp1252 → кракозябры и UnicodeEncodeError."""
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    os.environ["PYTHONUTF8"] = "1"
+    for fd, name in ((1, "stdout"), (2, "stderr")):
+        stream = getattr(sys, name, None)
+        enc = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        ok = stream is not None and enc in ("utf8", "cp65001")
+        if ok:
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace", newline="\n")
+                continue
+            except Exception:
+                ok = False
+        try:
+            wrapped = open(
+                fd, "w", encoding="utf-8", errors="replace",
+                closefd=False, newline="\n", buffering=1,
+            )
+            setattr(sys, name, wrapped)
+        except Exception:
+            if stream is not None:
+                try:
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+                except Exception:
+                    pass
+
+
+_force_utf8_stdio()
+
+
 def emit(obj: dict) -> None:
-    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
-    sys.stdout.flush()
+    """JSON в stdout строго UTF-8, без зависимости от кодовой страницы консоли."""
+    line = json.dumps(obj, ensure_ascii=False, default=str) + "\n"
+    data = line.encode("utf-8", "replace")
+    try:
+        buf = getattr(sys.stdout, "buffer", None)
+        if buf is not None:
+            buf.write(data)
+            buf.flush()
+            return
+    except Exception:
+        pass
+    try:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        return
+    except Exception:
+        pass
+    try:
+        sys.stdout.write(json.dumps(obj, ensure_ascii=True, default=str) + "\n")
+        sys.stdout.flush()
+    except Exception:
+        pass
 
 
 def _build_proxy(args):
@@ -315,6 +366,7 @@ async def run(args) -> int:
 
 
 def main() -> int:
+    _force_utf8_stdio()
     p = argparse.ArgumentParser()
     p.add_argument("--workdir", required=True)
     p.add_argument("--actions", default="")

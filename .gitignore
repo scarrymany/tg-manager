@@ -17,6 +17,13 @@ venv/
 /release/
 *.spec.bak
 
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
 # Логи и локальные данные
 *.log
 launch.log

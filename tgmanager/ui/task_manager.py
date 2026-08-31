@@ -87,6 +87,7 @@ class TaskManager(QObject):
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONIOENCODING", "utf-8")
         env.insert("PYTHONUTF8", "1")
+        env.insert("PYTHONUNBUFFERED", "1")
         proc.setProcessEnvironment(env)
         proc.setWorkingDirectory(paths.app_root())
         proc.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)

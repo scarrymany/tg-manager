@@ -1,0 +1,4 @@
+telethon>=1.36,<2
+opentele-ng>=1.4.0
+python-socks>=2.4
+tgcrypto-pyrofork>=1.2.7

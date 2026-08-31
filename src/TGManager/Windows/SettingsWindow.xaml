@@ -1,0 +1,102 @@
+<Window x:Class="TGManager.Windows.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки"
+        Width="580" Height="640"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize"
+        MinWidth="520" MinHeight="480"
+        Background="Transparent"
+        ShowInTaskbar="False">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
+    </WindowChrome.WindowChrome>
+    <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid Margin="16,0,8,0">
+                <TextBlock Text="Настройки" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource CloseButton}" HorizontalAlignment="Right" Click="OnCancel">
+                    <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.2" Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20"/>
+                </Button>
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="20,8,20,8">
+                    <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="TELEGRAM (БИНАРНИК ДЛЯ ЗАПУСКА)" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TgBox" Style="{StaticResource FieldBox}"/>
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="Обзор…" Margin="8,0,0,0" Click="OnBrowseTg"/>
+                                <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="Авто" Margin="8,0,0,0" Click="OnAutoTg"/>
+                            </Grid>
+                            <TextBlock x:Name="TgStatus" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,10" Foreground="{StaticResource SubtleBrush}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="⬇  Скачать переносной Telegram"
+                                    HorizontalAlignment="Left" Click="OnDownloadTg"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="ПРОКСИ-ОБЁРТКА (HTTP / SOCKS5 НА КОНТЕЙНЕР)" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="PcBox" Style="{StaticResource FieldBox}"/>
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="Авто" Margin="8,0,0,0" Click="OnAutoPc"/>
+                            </Grid>
+                            <TextBlock x:Name="PcStatus" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,10" Foreground="{StaticResource SubtleBrush}"/>
+                            <Button Style="{StaticResource GhostButton}" Content="⬇  Скачать прокси-обёртку"
+                                    HorizontalAlignment="Left" Click="OnDownloadPc"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="14,12">
+                        <StackPanel>
+                            <TextBlock Text="ПРОЧЕЕ" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                            <CheckBox x:Name="ManyChk" Style="{StaticResource GlassCheck}"
+                                      Content="Разрешать много окон одновременно (флаг -many)" Margin="0,0,0,12"/>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="DataLabel" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="Открыть" Click="OnOpenData"/>
+                            </Grid>
+                            <Button Style="{StaticResource GhostButton}" Content="📌  Ярлык на рабочий стол"
+                                    HorizontalAlignment="Left" Click="OnShortcut"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,8,20,16">
+                <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnCancel" Margin="0,0,8,0"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

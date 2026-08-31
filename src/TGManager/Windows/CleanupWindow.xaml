@@ -1,0 +1,74 @@
+<Window x:Class="TGManager.Windows.CleanupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Автоматизация"
+        Width="560" Height="680"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize"
+        MinWidth="500" MinHeight="520"
+        Background="Transparent"
+        ShowInTaskbar="False">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
+    </WindowChrome.WindowChrome>
+    <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid Margin="16,0,8,0">
+                <TextBlock x:Name="TitleText" Text="Автоматизация" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource CloseButton}" HorizontalAlignment="Right" Click="OnClose">
+                    <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.2" Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20"/>
+                </Button>
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="22,8,22,8">
+                    <TextBlock Text="⚠ Действия необратимы. Telegram этого контейнера должен быть закрыт (во время чистки запуск заблокирован)."
+                               TextWrapping="Wrap" Foreground="{StaticResource YellowBrush}" FontSize="12" Margin="0,0,0,10"/>
+                    <TextBlock x:Name="ConnLabel" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,12"/>
+
+                    <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="ЧТО ЧИСТИТЬ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                            <CheckBox x:Name="ChkChannels" Style="{StaticResource GlassCheck}" Content="Каналы — выйти" IsChecked="True"/>
+                            <CheckBox x:Name="ChkGroups" Style="{StaticResource GlassCheck}" Content="Группы — выйти / удалить" IsChecked="True"/>
+                            <CheckBox x:Name="ChkPrivate" Style="{StaticResource GlassCheck}" Content="Личные переписки — удалить" IsChecked="True"/>
+                            <CheckBox x:Name="ChkBots" Style="{StaticResource GlassCheck}" Content="Боты — удалить чат" IsChecked="True"/>
+                            <CheckBox x:Name="ChkSaved" Style="{StaticResource GlassCheck}" Content="«Избранное» (Saved) — очистить" IsChecked="True"/>
+                            <CheckBox x:Name="ChkContacts" Style="{StaticResource GlassCheck}" Content="Контакты — удалить"/>
+                            <CheckBox x:Name="ChkPhotos" Style="{StaticResource GlassCheck}" Content="Фото профиля — удалить"/>
+                            <CheckBox x:Name="ChkRevoke" Style="{StaticResource GlassCheck}" Content="Удалять личные переписки и у собеседника (revoke)"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock x:Name="StatusLabel" Text="Готово к проверке." TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                    <ProgressBar x:Name="Bar" Height="6" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,8"/>
+                    <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="130" IsReadOnly="True"
+                             FontFamily="{StaticResource MonoFont}" FontSize="12" VerticalScrollBarVisibility="Auto"
+                             AcceptsReturn="True" TextWrapping="Wrap"/>
+                    <CheckBox x:Name="ConfirmChk" Style="{StaticResource GlassCheck}" Content="Я понимаю, что это необратимо"
+                              Margin="0,12,0,0" Checked="OnConfirm" Unchecked="OnConfirm"/>
+                </StackPanel>
+            </ScrollViewer>
+            <Grid Grid.Row="2" Margin="22,8,22,16">
+                <Button x:Name="DryBtn" Style="{StaticResource GhostButton}" Content="Проверить (dry-run)"
+                        HorizontalAlignment="Left" Click="OnDryRun"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="RunBtn" Style="{StaticResource DangerButton}" Content="Запустить чистку"
+                            IsEnabled="False" Click="OnRun" Margin="0,0,8,0"/>
+                    <Button x:Name="CloseBtn" Style="{StaticResource GhostButton}" Content="Закрыть" Click="OnClose"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
