@@ -42,6 +42,19 @@ def emit(obj: dict) -> None:
     sys.stdout.flush()
 
 
+def _tdata_error(e: BaseException) -> str:
+    s = str(e)
+    low = s.lower()
+    if "no account" in low:
+        return ("В tdata не найдено залогиненного аккаунта. Возможные причины: "
+                "в контейнер положен tdata без входа в аккаунт; стоит локальный "
+                "пароль на tdata; либо формат tdata новее, чем поддерживает opentele.")
+    if "passcode" in low or "decrypt" in low or "badkey" in low:
+        return ("tdata защищён локальным паролем — opentele не откроет его без пароля. "
+                "Снимите локальный пароль в Telegram и переэкспортируйте tdata.")
+    return f"Не удалось прочитать tdata: {e.__class__.__name__}: {s}"
+
+
 def categorize(dialog, me_id: int):
     ent = dialog.entity
     if dialog.is_user:
@@ -86,8 +99,13 @@ async def run(args) -> int:
         return 2
 
     emit({"type": "stage", "msg": "Загрузка tdata…"})
-    tdesk = TDesktop(tdata)
-    if not tdesk.isLoaded():
+    try:
+        tdesk = TDesktop(tdata)
+        loaded = tdesk.isLoaded()
+    except BaseException as e:  # opentele бросает подклассы BaseException
+        emit({"type": "error", "error": _tdata_error(e)})
+        return 2
+    if not loaded:
         emit({"type": "error", "error": "Не удалось прочитать tdata (пусто/повреждено)"})
         return 2
 
@@ -179,7 +197,7 @@ def main() -> int:
     except KeyboardInterrupt:
         emit({"type": "error", "error": "Прервано"})
         return 1
-    except Exception as e:
+    except BaseException as e:  # opentele исключения наследуют BaseException
         emit({"type": "error", "error": f"{e.__class__.__name__}: {e}"})
         return 1
 
