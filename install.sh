@@ -60,7 +60,7 @@ cat > "$APPS_DIR/$APP_ID.desktop" <<EOF
 Type=Application
 Name=$APP_NAME
 Comment=Менеджер Telegram-контейнеров (tdata)
-Exec=$DIR/run.sh
+Exec="$DIR/run.sh"
 Icon=$APP_ID
 Terminal=false
 Categories=Network;
@@ -76,13 +76,22 @@ cat > "$APPS_DIR/org.telegram.desktop.desktop" <<EOF
 Type=Application
 Name=Telegram (TG Manager)
 Comment=Аккаунт, запущенный из TG Manager
-Exec=$TG_BIN -workdir %f -many
+Exec="$TG_BIN" -workdir %f -many
 Icon=$TG_ICON
 Terminal=false
 NoDisplay=true
 Categories=Network;
 StartupWMClass=org.telegram.desktop
 EOF
+
+# --- Ярлык на рабочем столе (мгновенный доступ, без ожидания меню) ---
+DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
+if [ -d "$DESKTOP_DIR" ]; then
+    cp "$APPS_DIR/$APP_ID.desktop" "$DESKTOP_DIR/$APP_NAME.desktop"
+    chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
+    gio set "$DESKTOP_DIR/$APP_NAME.desktop" metadata::trusted true 2>/dev/null || true
+    echo "==> Ярлык на рабочем столе: $DESKTOP_DIR/$APP_NAME.desktop"
+fi
 
 # Убрать устаревшие авто-заглушки GNOME для Telegram (мешают сопоставлению иконки)
 rm -f "$APPS_DIR"/userapp-Telegram\ Desktop-*.desktop 2>/dev/null || true
