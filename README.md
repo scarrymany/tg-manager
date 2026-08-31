@@ -41,6 +41,22 @@ git clone https://github.com/scarrymany/tg-manager.git && cd tg-manager && ./ins
 sudo apt install python3-pyqt6 proxychains4
 ```
 
+### Интеграция с системой
+
+`install.sh` регистрирует программу в меню приложений с собственной иконкой
+(ярлык `~/.local/share/applications/tg-manager.desktop`, иконки в `hicolor`).
+
+Запускаемые из программы аккаунты Telegram получают **нашу иконку с зелёной
+точкой** справа снизу — за счёт desktop-файла `org.telegram.desktop.desktop`,
+который GNOME сопоставляет с окном по `app_id`. Если старый значок закешировался,
+перезапустите контейнер (иногда нужно перелогиниться в сессию GNOME).
+
+Убрать интеграцию (данные и конфиг остаются):
+
+```bash
+./uninstall.sh
+```
+
 ## Как пользоваться
 
 1. **Добавить аккаунт** → задайте имя (и при желании прокси).

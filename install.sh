@@ -1,67 +1,101 @@
 #!/usr/bin/env bash
 # Установщик TG Manager для Linux (Debian/Ubuntu и производные).
-# Ставит зависимости, регистрирует ярлык в меню приложений.
+# Ставит зависимости, регистрирует программу в меню приложений с иконкой,
+# и настраивает иконку «наша + зелёная точка» для запускаемых Telegram.
 set -euo pipefail
 
 APP_ID="tg-manager"
 APP_NAME="TG Manager"
+TG_ICON="tgmanager-telegram-running"   # имя иконки для запущенных Telegram
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+APPS_DIR="$HOME/.local/share/applications"
+ICONS_ROOT="$HOME/.local/share/icons/hicolor"
 
 echo "==> Установка $APP_NAME"
 echo "    Папка программы: $DIR"
 
 # --- Системные зависимости ---
 if command -v apt >/dev/null 2>&1; then
-    echo "==> Устанавливаю зависимости (нужен sudo): python3-pyqt6, proxychains4"
-    sudo apt update -y
-    sudo apt install -y python3-pyqt6 proxychains4 python3-pil || {
-        echo "!! Не удалось установить пакеты через apt."; }
+    echo "==> Зависимости (нужен sudo): python3-pyqt6, proxychains4, python3-pil"
+    sudo apt update -y || true
+    sudo apt install -y python3-pyqt6 proxychains4 python3-pil || \
+        echo "!! Не удалось поставить пакеты через apt — проверьте вручную."
 else
     echo "!! apt не найден. Установите вручную: PyQt6 и proxychains4."
 fi
 
-# --- Проверка PyQt6 ---
-if python3 -c "import PyQt6.QtWidgets" 2>/dev/null; then
-    echo "==> PyQt6: OK"
-else
-    echo "!! PyQt6 не импортируется. Попробуйте: sudo apt install python3-pyqt6"
-fi
+python3 -c "import PyQt6.QtWidgets" 2>/dev/null && echo "==> PyQt6: OK" \
+    || echo "!! PyQt6 не импортируется: sudo apt install python3-pyqt6"
 
-# --- Иконки (если Pillow есть и PNG отсутствуют) ---
-if [ ! -f "$DIR/assets/icon.png" ] && python3 -c "import PIL" 2>/dev/null; then
-    echo "==> Генерирую иконку"
+# --- Иконки: сгенерировать при необходимости ---
+if [ ! -f "$DIR/assets/icon_running_256.png" ] && python3 -c "import PIL" 2>/dev/null; then
+    echo "==> Генерирую иконки"
     python3 "$DIR/assets/make_icon.py" || true
 fi
+
+# --- Установка иконок в hicolor (все размеры) ---
+install_icon() {  # $1=исходник $2=имя-иконки $3=размер
+    local src="$1" name="$2" size="$3"
+    local dst="$ICONS_ROOT/${size}x${size}/apps"
+    [ -f "$src" ] || return 0
+    mkdir -p "$dst"
+    cp "$src" "$dst/$name.png"
+}
+for s in 48 64 128 256; do
+    install_icon "$DIR/assets/icon_${s}.png" "$APP_ID" "$s"
+    install_icon "$DIR/assets/icon_running_${s}.png" "$TG_ICON" "$s"
+done
+install_icon "$DIR/assets/icon.png" "$APP_ID" 512
+install_icon "$DIR/assets/icon_running_512.png" "$TG_ICON" 512
 
 # --- Права на запуск ---
 chmod +x "$DIR/run.sh" "$DIR/main.py" "$DIR/get_telegram.sh" 2>/dev/null || true
 
-# --- .desktop для меню приложений ---
-APPS_DIR="$HOME/.local/share/applications"
-ICONS_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
-mkdir -p "$APPS_DIR" "$ICONS_DIR"
-if [ -f "$DIR/assets/icon.png" ]; then
-    cp "$DIR/assets/icon.png" "$ICONS_DIR/$APP_ID.png"
-fi
+mkdir -p "$APPS_DIR"
 
+# --- .desktop самой программы ---
 cat > "$APPS_DIR/$APP_ID.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=$APP_NAME
-Comment=Менеджер Telegram-аккаунтов (tdata)
+Comment=Менеджер Telegram-контейнеров (tdata)
 Exec=$DIR/run.sh
 Icon=$APP_ID
 Terminal=false
 Categories=Network;Utility;
 StartupWMClass=$APP_ID
 EOF
-chmod +x "$APPS_DIR/$APP_ID.desktop" 2>/dev/null || true
+
+# --- .desktop-подмена иконки для запускаемых Telegram (app_id = org.telegram.desktop) ---
+# GNOME сопоставляет окно с desktop-файлом по app_id и берёт из него Icon.
+TG_BIN="$DIR/telegram/Telegram"
+[ -x "$TG_BIN" ] || TG_BIN="$(command -v telegram-desktop || echo telegram-desktop)"
+cat > "$APPS_DIR/org.telegram.desktop.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Telegram (TG Manager)
+Comment=Аккаунт, запущенный из TG Manager
+Exec=$TG_BIN -workdir %f -many
+Icon=$TG_ICON
+Terminal=false
+NoDisplay=true
+Categories=Network;
+StartupWMClass=org.telegram.desktop
+EOF
+
+# Убрать устаревшие авто-заглушки GNOME для Telegram (мешают сопоставлению иконки)
+rm -f "$APPS_DIR"/userapp-Telegram\ Desktop-*.desktop 2>/dev/null || true
+
+# --- Обновить кэши ---
+gtk-update-icon-cache -f -t "$ICONS_ROOT" 2>/dev/null || true
 update-desktop-database "$APPS_DIR" 2>/dev/null || true
 
 echo ""
 echo "==> Готово!"
-echo "    Запуск из меню приложений: «$APP_NAME»"
-echo "    Или из терминала:          $DIR/run.sh"
+echo "    Программа в меню: «$APP_NAME» (со своей иконкой)"
+echo "    Запуск из терминала: $DIR/run.sh"
 echo ""
-echo "    Для прокси рекомендуется переносной Telegram —"
-echo "    скачайте его кнопкой в Настройках или командой: $DIR/get_telegram.sh"
+echo "    Иконка запущенных Telegram = наша + зелёная точка."
+echo "    Если старый значок закешировался — перезапустите Telegram-контейнер"
+echo "    (а иногда нужно перелогиниться в сессию GNOME)."
