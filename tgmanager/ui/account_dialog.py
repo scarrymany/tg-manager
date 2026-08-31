@@ -32,7 +32,7 @@ class AccountDialog(QDialog):
         super().__init__(parent)
         self.editing = account is not None
         self.account = account or Account(name="")
-        self.setWindowTitle("Изменить аккаунт" if self.editing else "Новый аккаунт")
+        self.setWindowTitle("Изменить контейнер" if self.editing else "Новый контейнер")
         self.setMinimumWidth(420)
         self._build()
         self._load()
@@ -42,7 +42,7 @@ class AccountDialog(QDialog):
         root.setContentsMargins(22, 22, 22, 18)
         root.setSpacing(16)
 
-        title = QLabel("Изменить аккаунт" if self.editing else "Новый аккаунт")
+        title = QLabel("Изменить контейнер" if self.editing else "Новый контейнер")
         title.setObjectName("AppTitle")
         root.addWidget(title)
 
@@ -108,8 +108,8 @@ class AccountDialog(QDialog):
 
         root.addLayout(form)
 
-        hint = QLabel("После создания нажмите «Папка» на карточке и положите туда папку "
-                      "tdata от нужного аккаунта.")
+        hint = QLabel("После создания нажмите «Папка» в строке контейнера и положите туда "
+                      "папку tdata от нужного аккаунта.")
         hint.setObjectName("Hint")
         hint.setWordWrap(True)
         root.addWidget(hint)
@@ -188,7 +188,7 @@ class AccountDialog(QDialog):
     def _accept(self) -> None:
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Проверьте данные", "Введите название аккаунта.")
+            QMessageBox.warning(self, "Проверьте данные", "Введите название контейнера.")
             return
         ptype = self.proxy_combo.currentData()
         if ptype != PROXY_NONE and not self.host_edit.text().strip():

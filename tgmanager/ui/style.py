@@ -94,15 +94,15 @@ QPushButton#Danger {{
 }}
 QPushButton#Danger:hover {{ background: rgba(229,72,77,0.12); }}
 
-/* ---- Карточка аккаунта ---- */
-#Card {{
+/* ---- Строка контейнера ---- */
+#Row {{
     background: {CARD};
     border: 1px solid {BORDER};
-    border-radius: 16px;
+    border-radius: 12px;
 }}
-#Card:hover {{ background: {CARD_HOVER}; border-color: #31435a; }}
-#CardName {{ font-size: 16px; font-weight: 700; color: {TEXT}; }}
-#CardMeta {{ font-size: 12px; color: {TEXT_DIM}; }}
+#Row:hover {{ background: {CARD_HOVER}; border-color: #31435a; }}
+#RowName {{ font-size: 15px; font-weight: 700; color: {TEXT}; }}
+#RowMeta {{ font-size: 12px; color: {TEXT_DIM}; }}
 #AccentBar {{ border-radius: 3px; }}
 
 #PillRunning {{

@@ -21,9 +21,8 @@ from ..config import Store
 from ..models import Account
 from ..telegram import build_launch_plan, resolve_telegram
 from .account_dialog import AccountDialog
-from .card import AccountCard
+from .card import AccountRow
 from .download import DownloadTelegramDialog
-from .flow_layout import FlowLayout
 from .prepare import PrepareContainerDialog
 from .settings_dialog import SettingsDialog
 from .style import QSS
@@ -60,12 +59,15 @@ class MainWindow(QMainWindow):
 
         outer.addWidget(self._header())
 
-        # Область прокрутки с карточками
+        # Область прокрутки со списком строк-контейнеров
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.board = QWidget()
         self.board.setObjectName("Board")
-        self.flow = FlowLayout(self.board, margin=22, spacing=18)
+        self.rows_layout = QVBoxLayout(self.board)
+        self.rows_layout.setContentsMargins(22, 20, 22, 20)
+        self.rows_layout.setSpacing(12)
+        self.rows_layout.addStretch(1)  # прижимаем строки к верху
         self.scroll.setWidget(self.board)
         outer.addWidget(self.scroll, 1)
 
@@ -95,14 +97,14 @@ class MainWindow(QMainWindow):
         titles.setSpacing(0)
         t = QLabel(APP_NAME)
         t.setObjectName("AppTitle")
-        s = QLabel("Менеджер Telegram-аккаунтов")
+        s = QLabel("Менеджер Telegram-контейнеров")
         s.setObjectName("AppSubtitle")
         titles.addWidget(t)
         titles.addWidget(s)
         lay.addLayout(titles)
         lay.addStretch(1)
 
-        add_btn = QPushButton("＋  Добавить аккаунт")
+        add_btn = QPushButton("＋  Добавить контейнер")
         add_btn.setObjectName("Primary")
         add_btn.clicked.connect(self.add_account)
         settings_btn = QPushButton("⚙  Настройки")
@@ -127,14 +129,14 @@ class MainWindow(QMainWindow):
             img.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lay.addWidget(img)
 
-        title = QLabel("Пока нет аккаунтов")
+        title = QLabel("Пока нет контейнеров")
         title.setObjectName("EmptyTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text = QLabel("Создайте первое окно-аккаунт, дайте имя,\n"
+        text = QLabel("Создайте первый контейнер, дайте имя,\n"
                       "а затем положите папку tdata в его папку.")
         text.setObjectName("EmptyText")
         text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        btn = QPushButton("＋  Создать аккаунт")
+        btn = QPushButton("＋  Создать контейнер")
         btn.setObjectName("Primary")
         btn.clicked.connect(self.add_account)
         lay.addWidget(title)
@@ -148,22 +150,23 @@ class MainWindow(QMainWindow):
 
     # ---------- данные ----------
     def reload_cards(self) -> None:
-        # очистить
-        while self.flow.count():
-            item = self.flow.takeAt(0)
+        # очистить всё, включая распорку
+        while self.rows_layout.count():
+            item = self.rows_layout.takeAt(0)
             if item and item.widget():
                 item.widget().deleteLater()
         self.cards.clear()
 
         for account in self.store.accounts:
-            card = AccountCard(account)
-            card.launch.connect(self.launch_account)
-            card.stop.connect(self.stop_account)
-            card.edit.connect(self.edit_account)
-            card.delete.connect(self.delete_account)
-            card.open_folder.connect(self.open_folder)
-            self.flow.addWidget(card)
-            self.cards[account.id] = card
+            row = AccountRow(account)
+            row.launch.connect(self.launch_account)
+            row.stop.connect(self.stop_account)
+            row.edit.connect(self.edit_account)
+            row.delete.connect(self.delete_account)
+            row.open_folder.connect(self.open_folder)
+            self.rows_layout.addWidget(row)
+            self.cards[account.id] = row
+        self.rows_layout.addStretch(1)
 
         has = bool(self.store.accounts)
         self.scroll.setVisible(has)
@@ -205,7 +208,7 @@ class MainWindow(QMainWindow):
             card = self.cards.get(account_id)
             if card:
                 card.set_account(dlg.result_account())
-            self.statusBar().showMessage("Аккаунт обновлён", 4000)
+            self.statusBar().showMessage("Контейнер обновлён", 4000)
 
     def delete_account(self, account_id: str) -> None:
         account = self.store.get(account_id)
@@ -214,10 +217,10 @@ class MainWindow(QMainWindow):
         workdir = paths.account_workdir(account_id)
         running = launcher.is_running(workdir)
         msg = QMessageBox(self)
-        msg.setWindowTitle("Удалить аккаунт")
+        msg.setWindowTitle("Удалить контейнер")
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText(f"Удалить «{account.name}»?")
-        info = "Аккаунт будет остановлен.\n" if running else ""
+        info = "Контейнер будет остановлен.\n" if running else ""
         info += ("Также удалить папку с данными (tdata)?\n"
                  "«Нет» — оставить папку на диске.")
         msg.setInformativeText(info)
@@ -235,7 +238,7 @@ class MainWindow(QMainWindow):
             shutil.rmtree(workdir, ignore_errors=True)
         self.store.remove(account_id)
         self.reload_cards()
-        self.statusBar().showMessage("Аккаунт удалён", 4000)
+        self.statusBar().showMessage("Контейнер удалён", 4000)
 
     def open_folder(self, account_id: str) -> None:
         workdir = paths.account_workdir(account_id)
@@ -249,7 +252,7 @@ class MainWindow(QMainWindow):
             return
         workdir = paths.account_workdir(account_id)
         if launcher.is_running(workdir):
-            self.statusBar().showMessage("Аккаунт уже запущен", 4000)
+            self.statusBar().showMessage("Контейнер уже запущен", 4000)
             return
 
         # Переносной Telegram обязателен — если его нет, предлагаем скачать
