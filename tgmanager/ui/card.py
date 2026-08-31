@@ -32,7 +32,7 @@ class AccountCard(QFrame):
     def __init__(self, account: Account, parent: QWidget | None = None):
         super().__init__(parent)
         self.account = account
-        self._running = False
+        self._running = None  # None => первое обновление всегда применит состояние
         self.setObjectName("Card")
         self.setFixedWidth(CARD_WIDTH)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -118,6 +118,7 @@ class AccountCard(QFrame):
         act_row.addWidget(del_btn)
         root.addLayout(act_row)
 
+        self.set_running(False)  # начальное состояние: Запуск активен, Стоп — нет
         self.refresh()
 
     # ---------- обновление ----------

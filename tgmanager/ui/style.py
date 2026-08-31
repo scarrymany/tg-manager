@@ -78,10 +78,12 @@ QPushButton#Launch {{
     background: {ACCENT}; border: none; color: #ffffff; font-weight: 600;
 }}
 QPushButton#Launch:hover {{ background: {ACCENT_HOVER}; }}
+QPushButton#Launch:disabled {{ background: #1c2a38; color: #5b6a7d; }}
 QPushButton#Stop {{
     background: transparent; border: 1px solid {RED}; color: {RED}; font-weight: 600;
 }}
 QPushButton#Stop:hover {{ background: rgba(255,92,92,0.12); }}
+QPushButton#Stop:disabled {{ border: 1px solid {BORDER}; color: #5b6a7d; background: transparent; }}
 
 QPushButton#Ghost {{
     background: transparent; border: 1px solid {BORDER}; padding: 7px 10px;
