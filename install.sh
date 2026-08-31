@@ -27,9 +27,9 @@ fi
 
 # --- opentele (чтение tdata) — через pip; + патч совместимости с Python 3.13+ ---
 if python3 -m pip --version >/dev/null 2>&1; then
-    echo "==> Ставлю opentele (pip --user)"
-    python3 -m pip install --user --break-system-packages opentele >/dev/null 2>&1 || \
-        echo "!! opentele не установился — автоматизация будет недоступна."
+    echo "==> Ставлю opentele + python-socks (pip --user)"
+    python3 -m pip install --user --break-system-packages opentele python-socks >/dev/null 2>&1 || \
+        echo "!! opentele/python-socks не установились — автоматизация/прокси будут недоступны."
     python3 "$DIR/tgmanager/automation/_patch_opentele.py" >/dev/null 2>&1 || true
 else
     echo "!! pip недоступен — opentele не поставлен (автоматизация опциональна)."

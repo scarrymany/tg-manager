@@ -27,5 +27,5 @@ def available() -> bool:
 
 INSTALL_HINT = (
     "sudo apt install -y python3-pip python3-telethon && "
-    "pip install --user --break-system-packages opentele"
+    "pip install --user --break-system-packages opentele python-socks"
 )

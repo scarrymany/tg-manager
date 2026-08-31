@@ -42,6 +42,25 @@ def emit(obj: dict) -> None:
     sys.stdout.flush()
 
 
+def _build_proxy(args):
+    """(proxy_dict|None, человекочитаемо). proxy_dict — формат python-socks для Telethon."""
+    if not args.proxy_host or not args.proxy_port:
+        return None, "напрямую (без прокси)"
+    ptype = "socks5" if args.proxy_type == "socks5" else "http"
+    proxy = {
+        "proxy_type": ptype,
+        "addr": args.proxy_host,
+        "port": int(args.proxy_port),
+        "rdns": True,
+    }
+    if args.proxy_user:
+        proxy["username"] = args.proxy_user
+    if args.proxy_pass:
+        proxy["password"] = args.proxy_pass
+    human = f"{ptype.upper()} {args.proxy_host}:{args.proxy_port}"
+    return proxy, human
+
+
 def _tdata_error(e: BaseException) -> str:
     s = str(e)
     low = s.lower()
@@ -108,10 +127,22 @@ async def run(args) -> int:
         emit({"type": "error", "error": "Не удалось прочитать tdata (пусто/повреждено)"})
         return 2
 
-    emit({"type": "stage", "msg": "Подключение к Telegram…"})
+    proxy, proxy_human = _build_proxy(args)
+    if proxy is not None:
+        try:
+            import python_socks  # noqa: F401
+        except Exception:
+            emit({"type": "error", "error": "Для прокси нужен python-socks: "
+                  "pip install --user --break-system-packages python-socks"})
+            return 2
+
+    emit({"type": "stage", "msg": f"Подключение к Telegram ({proxy_human})…"})
     # session=None → Telethon делает in-memory сессию (без файла). Передавать
     # StringSession-объект нельзя: в opentele баг (UnboundLocalError auth_session).
-    client = await tdesk.ToTelethon(session=None, flag=UseCurrentSession)
+    to_telethon_kwargs = {"session": None, "flag": UseCurrentSession}
+    if proxy is not None:
+        to_telethon_kwargs["proxy"] = proxy
+    client = await tdesk.ToTelethon(**to_telethon_kwargs)
     client.flood_sleep_threshold = FLOOD_AUTOSLEEP
     await client.connect()
     try:
@@ -192,6 +223,11 @@ def main() -> int:
     p.add_argument("--actions", default="")
     p.add_argument("--revoke", action="store_true")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--proxy-type", default="")
+    p.add_argument("--proxy-host", default="")
+    p.add_argument("--proxy-port", default="")
+    p.add_argument("--proxy-user", default="")
+    p.add_argument("--proxy-pass", default="")
     args = p.parse_args()
     try:
         return asyncio.run(run(args))

@@ -66,6 +66,15 @@ class AutomationDialog(QDialog):
         warn.setStyleSheet(f"color:{YELLOW};")
         root.addWidget(warn)
 
+        # Через какой прокси пойдёт подключение
+        prx = self.account.proxy
+        conn = f"Подключение: через {prx.summary()}" if prx.enabled \
+            else "Подключение: напрямую (у контейнера не задан прокси)"
+        self.conn_label = QLabel(conn)
+        self.conn_label.setObjectName("Hint")
+        self.conn_label.setWordWrap(True)
+        root.addWidget(self.conn_label)
+
         # Галочки действий
         card = QFrame()
         card.setObjectName("SettingsCard")
@@ -182,6 +191,15 @@ class AutomationDialog(QDialog):
             argv.append("--revoke")
         if dry:
             argv.append("--dry-run")
+        # Прокси контейнера — Telethon пойдёт через него
+        prx = self.account.proxy
+        if prx.enabled:
+            argv += ["--proxy-type", prx.type, "--proxy-host", prx.host,
+                     "--proxy-port", str(prx.port)]
+            if prx.username:
+                argv += ["--proxy-user", prx.username]
+            if prx.password:
+                argv += ["--proxy-pass", prx.password]
 
         self._proc = QProcess(self)
         self._proc.setWorkingDirectory(paths.APP_ROOT)
