@@ -63,9 +63,15 @@ class TaskRow(QFrame):
         root.addWidget(info_w, 1)
 
         self.progress = QProgressBar()
-        self.progress.setFixedWidth(170)
-        self.progress.setTextVisible(True)
+        self.progress.setFixedWidth(150)
+        self.progress.setTextVisible(False)  # текст выносим в отдельную подпись
         root.addWidget(self.progress)
+
+        self.count_label = QLabel("")
+        self.count_label.setObjectName("RowMeta")
+        self.count_label.setFixedWidth(110)
+        self.count_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        root.addWidget(self.count_label)
 
         self.pill = QLabel("● Идёт")
         self.pill.setObjectName("PillRunning")
@@ -99,10 +105,15 @@ class TaskRow(QFrame):
         # прогресс
         if t.state == "running" and t.total <= 0:
             self.progress.setRange(0, 0)
+            self.count_label.setText("…")
         else:
             self.progress.setRange(0, max(1, t.total))
             self.progress.setValue(t.done if t.total else (1 if t.finished else 0))
-        self.progress.setFormat(f"{t.done}/{t.total}" if t.total else "")
+            if t.total:
+                pct = int(t.done * 100 / t.total)
+                self.count_label.setText(f"{t.done}/{t.total} · {pct}%")
+            else:
+                self.count_label.setText("")
 
         # статус
         state_map = {
