@@ -103,6 +103,39 @@ async def _safe(coro_factory, label: str):
             return None
 
 
+async def _collect(client, me_id, cats):
+    """Собрать цели из ВСЕХ папок (основная + архив), дедуп по id."""
+    seen = set()
+    targets = []
+    counts = {"channels": 0, "groups": 0, "private": 0, "bots": 0}
+    for folder in (0, 1):  # 0 = основная, 1 = архив
+        async for d in client.iter_dialogs(folder=folder):
+            if d.id in seen:
+                continue
+            seen.add(d.id)
+            cat = categorize(d, me_id)
+            if cat and cat in cats:
+                targets.append((cat, d))
+                counts[cat] = counts.get(cat, 0) + 1
+    return targets, counts
+
+
+async def _delete_dialog(client, cat, d, revoke) -> bool:
+    """Удалить/покинуть один диалог. True — успех, False — ошибка (не повторять)."""
+    from telethon import errors
+    label = getattr(d, "name", None) or str(getattr(d, "id", ""))
+    while True:
+        try:
+            await client.delete_dialog(d.entity, revoke=(revoke and cat == "private"))
+            return True
+        except errors.FloodWaitError as e:
+            emit({"type": "flood", "seconds": int(e.seconds), "label": label})
+            await asyncio.sleep(int(e.seconds) + 2)
+        except errors.RPCError as e:
+            emit({"type": "warn", "label": label, "error": str(e)})
+            return False
+
+
 async def run(args) -> int:
     from opentele.td import TDesktop
     from opentele.api import UseCurrentSession
@@ -151,34 +184,56 @@ async def run(args) -> int:
             return 2
         me = await client.get_me()
 
-        emit({"type": "stage", "msg": "Сканирование диалогов…"})
-        targets = []
-        counts = {"channels": 0, "groups": 0, "private": 0, "bots": 0, "saved": 0}
-        async for dialog in client.iter_dialogs():
-            cat = categorize(dialog, me.id)
-            if cat and cat in selected:
-                targets.append((cat, dialog))
-                counts[cat] = counts.get(cat, 0) + 1
+        loop_cats = {c for c in ("channels", "groups", "private", "bots") if c in selected}
+        saved_sel = "saved" in selected
+        contacts_sel = "contacts" in selected
+        photos_sel = "photos" in selected
 
-        extra = (1 if "contacts" in selected else 0) + (1 if "photos" in selected else 0)
+        emit({"type": "stage", "msg": "Сканирование диалогов (включая архив)…"})
+        targets, counts = await _collect(client, me.id, loop_cats)
+        counts["saved"] = 1 if saved_sel else 0
+        extra = (1 if contacts_sel else 0) + (1 if photos_sel else 0) + (1 if saved_sel else 0)
         total = len(targets) + extra
         emit({"type": "summary", "counts": counts,
-              "contacts": "contacts" in selected, "photos": "photos" in selected,
-              "total": total})
+              "contacts": contacts_sel, "photos": photos_sel, "total": total})
 
         if args.dry_run:
             emit({"type": "done", "done": 0, "dry_run": True})
             return 0
 
         done = 0
-        for cat, dialog in targets:
-            label = dialog.name or str(dialog.id)
-            revoke = args.revoke and cat in ("private",)
-            await _safe(lambda: client.delete_dialog(dialog.entity, revoke=revoke)
-                        if cat != "saved" else client.delete_dialog("me"), label)
+        failed = set()
+
+        # «Избранное» — один раз (self-диалог из списка не удаляется, поэтому вне цикла)
+        if saved_sel:
+            await _safe(lambda: client.delete_dialog("me"), "Избранное")
             done += 1
-            emit({"type": "progress", "done": done, "total": total, "label": label, "cat": cat})
+            emit({"type": "progress", "done": done, "total": total,
+                  "label": "Избранное", "cat": "saved"})
             await asyncio.sleep(THROTTLE)
+
+        # Диалоги — повторяем проходы (архив + повторы), пока не станет пусто
+        passes = 0
+        while loop_cats:
+            passes += 1
+            targets, _ = await _collect(client, me.id, loop_cats)
+            targets = [(c, d) for c, d in targets if d.id not in failed]
+            if not targets:
+                break
+            if passes > 15:
+                emit({"type": "warn", "label": "Проходы",
+                      "error": "Достигнут лимит проходов — часть могла остаться"})
+                break
+            emit({"type": "stage", "msg": f"Проход {passes}: к удалению {len(targets)}"})
+            total = max(total, done + len(targets))
+            for cat, d in targets:
+                if await _delete_dialog(client, cat, d, args.revoke):
+                    done += 1
+                else:
+                    failed.add(d.id)
+                emit({"type": "progress", "done": done, "total": total,
+                      "label": d.name or str(d.id), "cat": cat})
+                await asyncio.sleep(THROTTLE)
 
         # Контакты
         if "contacts" in selected:
@@ -208,7 +263,7 @@ async def run(args) -> int:
             emit({"type": "progress", "done": done, "total": total,
                   "label": f"Фото профиля ({n or 0})", "cat": "photos"})
 
-        emit({"type": "done", "done": done})
+        emit({"type": "done", "done": done, "skipped": len(failed)})
         return 0
     finally:
         try:

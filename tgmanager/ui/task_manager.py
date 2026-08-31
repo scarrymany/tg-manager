@@ -144,7 +144,11 @@ class TaskManager(QObject):
         elif typ == "warn":
             t.log.append(f"! {obj.get('label','')}: {obj.get('error','')}")
         elif typ == "done":
-            t.current = "Готово" if not obj.get("dry_run") else "Проверка завершена"
+            if obj.get("dry_run"):
+                t.current = "Проверка завершена"
+            else:
+                sk = obj.get("skipped", 0)
+                t.current = "Готово" + (f" · пропущено {sk}" if sk else "")
         elif typ == "error":
             t.error = obj.get("error", "")
             t.log.append("✗ " + t.error)
