@@ -22,7 +22,19 @@ _TELEGRAM_CANDIDATES = [
 
 
 def is_snap(path: str) -> bool:
-    return bool(path) and os.path.realpath(path).startswith("/snap/")
+    """True, если путь ведёт к snap-версии Telegram.
+
+    /snap/bin/telegram-desktop — это симлинк на /usr/bin/snap (лаунчер snap),
+    поэтому проверяем и сам путь, и его realpath.
+    """
+    if not path:
+        return False
+    rp = os.path.realpath(path)
+    return (
+        path.startswith("/snap/")
+        or rp.startswith("/snap/")
+        or os.path.basename(rp) == "snap"  # /usr/bin/snap — лаунчер snap
+    )
 
 
 def detect_telegram() -> Optional[str]:
