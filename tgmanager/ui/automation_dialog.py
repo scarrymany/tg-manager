@@ -45,6 +45,7 @@ class AutomationDialog(QDialog):
         self._buf = ""
         self._running = False
         self._dry = False
+        self.requested = None  # (actions, revoke) — выставляется при «Запустить чистку»
         self.setWindowTitle("Автоматизация")
         self.setMinimumWidth(540)
         self.setModal(True)
@@ -119,9 +120,9 @@ class AutomationDialog(QDialog):
         self.dry_btn = QPushButton("Проверить (dry-run)")
         self.dry_btn.setObjectName("Ghost")
         self.dry_btn.clicked.connect(lambda: self._start(dry=True))
-        self.run_btn = QPushButton("Очистить")
+        self.run_btn = QPushButton("Запустить чистку")
         self.run_btn.setObjectName("Danger")
-        self.run_btn.clicked.connect(lambda: self._start(dry=False))
+        self.run_btn.clicked.connect(self._request_cleanup)
         btns.addWidget(self.dry_btn)
         btns.addStretch(1)
         self.close_btn = QPushButton("Закрыть")
@@ -147,7 +148,35 @@ class AutomationDialog(QDialog):
         self.dry_btn.setEnabled(enabled)
         self._sync_buttons()
 
-    # ---------- запуск ----------
+    def _request_cleanup(self):
+        """Не запускает здесь, а отдаёт конфиг в TaskManager (фоновая задача)."""
+        if self._running:
+            return
+        if deps.missing():
+            QMessageBox.warning(self, "Нет зависимостей",
+                                "Не установлены telethon/opentele.\n\n" + deps.INSTALL_HINT)
+            return
+        actions = self._selected()
+        if not actions:
+            QMessageBox.information(self, "Ничего не выбрано", "Отметьте, что чистить.")
+            return
+        if proc.is_running(self.workdir):
+            QMessageBox.warning(self, "Telegram запущен",
+                                "Сначала остановите Telegram этого контейнера («Стоп»).")
+            return
+        r = QMessageBox.question(
+            self, "Подтверждение",
+            "Запустить необратимую чистку выбранных разделов в фоне?\n"
+            f"Разделы: {', '.join(actions)}"
+            + ("\nЛичные — с revoke (у обеих сторон)." if self.revoke_chk.isChecked() else ""),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No)
+        if r != QMessageBox.StandardButton.Yes:
+            return
+        self.requested = (actions, self.revoke_chk.isChecked())
+        self.accept()
+
+    # ---------- dry-run (внутри окна) ----------
     def _start(self, dry: bool):
         if self._running:
             return

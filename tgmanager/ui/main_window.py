@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSpacerItem,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -32,6 +33,8 @@ from .download import DownloadTelegramDialog
 from .prepare import PrepareContainerDialog
 from .settings_dialog import SettingsDialog
 from .style import QSS
+from .task_manager import TaskManager
+from .task_row import TaskLogDialog, TaskRow
 
 
 def _widen_messagebox(msg: QMessageBox, width: int) -> None:
@@ -47,9 +50,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.store = store
         self.cards: dict[str, AccountCard] = {}
+        self.task_rows: dict[str, TaskRow] = {}
+        self.task_manager = TaskManager(self)
         self.setWindowTitle(APP_NAME)
-        self.setMinimumSize(880, 600)
-        self.resize(1040, 720)
+        self.setMinimumSize(920, 600)
+        self.resize(1060, 720)
         icon = paths.icon_path()
         if os.path.exists(icon):
             self.setWindowIcon(QIcon(icon))
@@ -57,6 +62,11 @@ class MainWindow(QMainWindow):
 
         self._build()
         self.reload_cards()
+
+        self.task_manager.added.connect(self._task_added)
+        self.task_manager.changed.connect(self._task_changed)
+        self.task_manager.removed.connect(self._task_removed)
+        self._refresh_tasks_nav()
 
         self.timer = QTimer(self)
         self.timer.setInterval(2000)
@@ -72,8 +82,21 @@ class MainWindow(QMainWindow):
         outer.setSpacing(0)
 
         outer.addWidget(self._header())
+        outer.addWidget(self._nav_strip())
 
-        # Область прокрутки со списком строк-контейнеров
+        self.stack = QStackedWidget()
+        self.stack.addWidget(self._containers_page())
+        self.stack.addWidget(self._tasks_page())
+        outer.addWidget(self.stack, 1)
+
+        self.statusBar().showMessage(f"{APP_NAME} {__version__}")
+
+    def _containers_page(self) -> QWidget:
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.board = QWidget()
@@ -81,15 +104,78 @@ class MainWindow(QMainWindow):
         self.rows_layout = QVBoxLayout(self.board)
         self.rows_layout.setContentsMargins(16, 16, 16, 16)
         self.rows_layout.setSpacing(10)
-        self.rows_layout.addStretch(1)  # прижимаем строки к верху
+        self.rows_layout.addStretch(1)
         self.scroll.setWidget(self.board)
-        outer.addWidget(self.scroll, 1)
+        lay.addWidget(self.scroll, 1)
 
-        # Пустое состояние
         self.empty = self._empty_state()
-        outer.addWidget(self.empty, 1)
+        lay.addWidget(self.empty, 1)
+        return page
 
-        self.statusBar().showMessage(f"{APP_NAME} {__version__}")
+    def _nav_strip(self) -> QWidget:
+        strip = QFrame()
+        strip.setObjectName("Header")
+        strip.setFixedHeight(46)
+        lay = QHBoxLayout(strip)
+        lay.setContentsMargins(16, 6, 16, 6)
+        lay.setSpacing(8)
+
+        self.nav_containers = QPushButton("Контейнеры")
+        self.nav_containers.setObjectName("Ghost")
+        self.nav_containers.setCheckable(True)
+        self.nav_containers.setChecked(True)
+        self.nav_containers.clicked.connect(lambda: self._switch_page(0))
+        self.nav_tasks = QPushButton("Активные задачи")
+        self.nav_tasks.setObjectName("Ghost")
+        self.nav_tasks.setCheckable(True)
+        self.nav_tasks.clicked.connect(lambda: self._switch_page(1))
+        lay.addWidget(self.nav_containers)
+        lay.addWidget(self.nav_tasks)
+        lay.addStretch(1)
+        return strip
+
+    def _tasks_page(self) -> QWidget:
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(16, 12, 16, 12)
+        lay.setSpacing(10)
+
+        bar = QHBoxLayout()
+        head = QLabel("Активные задачи")
+        head.setObjectName("EmptyTitle")
+        bar.addWidget(head)
+        bar.addStretch(1)
+        clear_btn = QPushButton("Очистить завершённые")
+        clear_btn.setObjectName("Ghost")
+        clear_btn.clicked.connect(self.task_manager.clear_finished)
+        stop_all_btn = QPushButton("Остановить все")
+        stop_all_btn.setObjectName("Danger")
+        stop_all_btn.clicked.connect(self.task_manager.stop_all)
+        bar.addWidget(clear_btn)
+        bar.addWidget(stop_all_btn)
+        lay.addLayout(bar)
+
+        self.tasks_scroll = QScrollArea()
+        self.tasks_scroll.setWidgetResizable(True)
+        tboard = QWidget()
+        tboard.setObjectName("Board")
+        self.tasks_layout = QVBoxLayout(tboard)
+        self.tasks_layout.setContentsMargins(0, 0, 0, 0)
+        self.tasks_layout.setSpacing(10)
+        self.tasks_layout.addStretch(1)
+        self.tasks_scroll.setWidget(tboard)
+        lay.addWidget(self.tasks_scroll, 1)
+
+        self.tasks_empty = QLabel("Нет активных задач.\nЗапустите чистку контейнера — задача появится здесь.")
+        self.tasks_empty.setObjectName("EmptyText")
+        self.tasks_empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(self.tasks_empty)
+        return page
+
+    def _switch_page(self, index: int) -> None:
+        self.stack.setCurrentIndex(index)
+        self.nav_containers.setChecked(index == 0)
+        self.nav_tasks.setChecked(index == 1)
 
     def _header(self) -> QWidget:
         header = QWidget()
@@ -364,6 +450,9 @@ class MainWindow(QMainWindow):
         account = self.store.get(account_id)
         if not account:
             return
+        if self.task_manager.is_active(account_id):
+            self._switch_page(1)
+            return
         workdir = paths.account_workdir(account_id)
         if launcher.is_running(workdir):
             QMessageBox.warning(self, "Telegram запущен",
@@ -381,11 +470,73 @@ class MainWindow(QMainWindow):
                                 "В контейнере нет папки tdata — нечего чистить.")
             return
         dlg = AutomationDialog(self, account)
-        dlg.exec()
+        if dlg.exec() and getattr(dlg, "requested", None):
+            actions, revoke = dlg.requested
+            self.task_manager.start(account, actions, revoke)
         self._poll_status()
+
+    # ---------- задачи ----------
+    def _task_added(self, tid: str) -> None:
+        task = self.task_manager.tasks.get(tid)
+        if not task:
+            return
+        old = self.task_rows.pop(tid, None)
+        if old:
+            old.deleteLater()
+        row = TaskRow(task)
+        row.stop.connect(self.task_manager.stop)
+        row.remove.connect(self.task_manager.remove)
+        row.show_log.connect(self._show_task_log)
+        self.task_rows[tid] = row
+        self.tasks_layout.insertWidget(self.tasks_layout.count() - 1, row)
+        self._refresh_tasks_nav()
+        self._switch_page(1)  # задача «перелетает» в активные
+
+    def _task_changed(self, tid: str) -> None:
+        row = self.task_rows.get(tid)
+        if row:
+            row.task = self.task_manager.tasks.get(tid, row.task)
+            row.update_view()
+        self._refresh_tasks_nav()
+        self._poll_status()
+
+    def _task_removed(self, tid: str) -> None:
+        row = self.task_rows.pop(tid, None)
+        if row:
+            row.deleteLater()
+        self._refresh_tasks_nav()
+        self._poll_status()
+
+    def _show_task_log(self, tid: str) -> None:
+        task = self.task_manager.tasks.get(tid)
+        if task:
+            TaskLogDialog(self, task).exec()
+
+    def _refresh_tasks_nav(self) -> None:
+        active = self.task_manager.active_count()
+        total = len(self.task_manager.tasks)
+        self.nav_tasks.setText(
+            f"Активные задачи ({active})" if active else "Активные задачи")
+        if hasattr(self, "tasks_empty"):
+            self.tasks_empty.setVisible(total == 0)
+            self.tasks_scroll.setVisible(total > 0)
 
     def open_settings(self) -> None:
         dlg = SettingsDialog(self, self.store.settings)
         if dlg.exec():
             self.store.save()
             self.statusBar().showMessage("Настройки сохранены", 4000)
+
+    def closeEvent(self, event):  # noqa: N802
+        if self.task_manager.active_count() > 0:
+            r = QMessageBox.question(
+                self, "Идут задачи",
+                f"Выполняется задач: {self.task_manager.active_count()}. "
+                "Закрыть программу и прервать их?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No)
+            if r != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            self.task_manager.stop_all()
+        super().closeEvent(event)

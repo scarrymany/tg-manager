@@ -110,6 +110,7 @@ QPushButton#Ghost {{
     background: {BG_CARD}; border: 1px solid {BORDER}; color: {TEXT_SEC};
 }}
 QPushButton#Ghost:hover {{ background: {BG_HOVER}; border-color: {BORDER_LIGHT}; color: {TEXT}; }}
+QPushButton#Ghost:checked {{ background: {BG_HOVER}; border-color: {ACCENT}; color: {TEXT_WHITE}; }}
 
 /* Stop — контурная красная, тише primary */
 QPushButton#Stop {{
