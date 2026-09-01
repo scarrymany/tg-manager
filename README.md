@@ -6,7 +6,7 @@
 
 **Много Telegram-аккаунтов на одном Windows. Каждый — в своём контейнере, со своим прокси.**
 
-[![Release](https://img.shields.io/github/v/release/scarrymany/tg-manager?filter=*-windows&label=release&color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
+[![Release](https://img.shields.io/github/v/release/scarrymany/tg-manager?label=release&color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/scarrymany/tg-manager/total?color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases)
 [![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-white?labelColor=0a0a0a)](#требования)
 [![.NET 9 · WPF](https://img.shields.io/badge/.NET%209-WPF-white?labelColor=0a0a0a)](src/TGManager)
@@ -30,7 +30,7 @@
 
 ## Скачать
 
-**[⬇ TG-Manager-1.2.0-windows.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
+**[⬇ TG-Manager-1.2.0.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
 
 1. Распакуйте в любую папку.
 2. Запустите `TGManager.exe` (`TGWorker.exe` должен лежать рядом).
@@ -88,7 +88,7 @@ TG-Manager\
 Нужны .NET 9 SDK и Python 3.12.
 
 ```bat
-git clone -b windows https://github.com/scarrymany/tg-manager.git
+git clone https://github.com/scarrymany/tg-manager.git
 cd tg-manager
 build.bat
 ```
@@ -98,8 +98,11 @@ build.bat
 как `python -m tgmanager.automation.worker`, если рядом нет `TGWorker.exe`
 (`pip install -r requirements-worker.txt`).
 
-CI (GitHub Actions, `windows-latest`) собирает zip и публикует релиз
-`v<версия>-windows` при каждом пуше в ветку `windows`; версия берётся из `TGManager.csproj`.
+Структура: `src/TGManager` — WPF-приложение, `tgmanager/automation` — Python-воркер чистки,
+`worker.spec` + `worker_entry.py` — сборка `TGWorker.exe`, `assets/` — иконки.
+
+CI (GitHub Actions, `windows-latest`) собирает zip и публикует релиз `v<версия>`
+при каждом пуше в `main`; версия берётся из `TGManager.csproj`.
 
 ## Требования
 
@@ -122,5 +125,7 @@ CI (GitHub Actions, `windows-latest`) собирает zip и публикует
 Разработчик — [@yeet17](https://t.me/yeet17) в Telegram · [scarrymany](https://github.com/scarrymany) на GitHub.
 Кнопки GitHub и Telegram есть прямо в заголовке программы.
 
-История изменений — в [CHANGELOG.md](CHANGELOG.md). Linux-версия (PyQt) осталась на ветке
-[`main`](https://github.com/scarrymany/tg-manager/tree/main) и больше не развивается.
+История изменений — в [CHANGELOG.md](CHANGELOG.md). Лицензия — [MIT](LICENSE).
+
+Старая Linux-версия (PyQt) сохранена в релизе
+[`linux-legacy`](https://github.com/scarrymany/tg-manager/releases/tag/linux-legacy) и не поддерживается.

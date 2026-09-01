@@ -7,7 +7,7 @@
 /config.json.tmp
 /error.log
 
-# Python
+# Python (воркер)
 __pycache__/
 *.pyc
 *.pyo

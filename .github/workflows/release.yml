@@ -1,13 +1,17 @@
-name: Windows portable release
+name: Release
 
 on:
   push:
-    branches: [windows]
-    tags: ["v*-windows", "v*-win"]
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -42,8 +46,7 @@ jobs:
         run: |
           python -m pip install -U pip wheel
           python -m pip install pyinstaller Pillow
-          python -m pip install "telethon>=1.36,<2" "opentele-ng>=1.4.0" "python-socks>=2.4" "tgcrypto-pyrofork>=1.2.7"
-          python -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip PyQt6 PySide6 2>$null
+          python -m pip install -r requirements-worker.txt
           python -c "import opentele, telethon, python_socks; print('worker imports ok', opentele.__file__)"
 
       - name: Icons
@@ -84,7 +87,7 @@ jobs:
           Copy-Item dist/TGWorker.exe $out/TGWorker.exe
           Copy-Item README.md $out/README.txt
           if (Test-Path RELEASE_NOTES.md) { Copy-Item RELEASE_NOTES.md $out/RELEASE_NOTES.txt }
-          $zip = "dist/TG-Manager-$ver-windows.zip"
+          $zip = "dist/TG-Manager-$ver.zip"
           if (Test-Path $zip) { Remove-Item $zip }
           Compress-Archive -Path $out -DestinationPath $zip -CompressionLevel Optimal
           Get-Item $zip | Format-List Name, Length
@@ -93,7 +96,7 @@ jobs:
       - name: Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TG-Manager-windows
+          name: TG-Manager-${{ env.APP_VERSION }}
           path: dist/TG-Manager-*.zip
           if-no-files-found: error
 
@@ -102,16 +105,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          $tag = "v${{ env.APP_VERSION }}-windows"
-          $zip = Get-ChildItem dist/TG-Manager-*-windows.zip | Select-Object -First 1
+          $tag = "v${{ env.APP_VERSION }}"
+          $zip = Get-ChildItem dist/TG-Manager-*.zip | Select-Object -First 1
           $notes = Get-Content -Raw RELEASE_NOTES.md
-          $exists = $true
+          $title = "TG Manager ${{ env.APP_VERSION }} — Windows 10/11"
           gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) { $exists = $false }
-          if (-not $exists) {
-            gh release create $tag $zip.FullName --title "TG Manager ${{ env.APP_VERSION }} — Windows 10/11" --notes $notes --target windows
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag $zip.FullName --title $title --notes $notes --target ${{ github.sha }} --latest
           } else {
             gh release upload $tag $zip.FullName --clobber
-            gh release edit $tag --notes $notes --title "TG Manager ${{ env.APP_VERSION }} — Windows 10/11"
+            gh release edit $tag --notes $notes --title $title --latest
           }
           gh release view $tag
