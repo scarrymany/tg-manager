@@ -6,8 +6,7 @@
 
 **Много Telegram-аккаунтов на одном Windows. Каждый — в своём контейнере, со своим прокси.**
 
-[![Release](https://img.shields.io/github/v/release/scarrymany/tg-manager?label=release&color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/scarrymany/tg-manager/total?color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases)
+[![Release](https://img.shields.io/badge/release-v1.2.1-white?labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
 [![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-white?labelColor=0a0a0a)](#требования)
 [![.NET 9 · WPF](https://img.shields.io/badge/.NET%209-WPF-white?labelColor=0a0a0a)](src/TGManager)
 [![Portable](https://img.shields.io/badge/portable-без%20установки-white?labelColor=0a0a0a)](#скачать)
