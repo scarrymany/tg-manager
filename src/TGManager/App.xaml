@@ -66,7 +66,10 @@
                             <Border.Background>
                                 <SolidColorBrush Color="#000A0A0A"/>
                             </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="Press" CornerRadius="8" Margin="0" Opacity="0" Background="#FFFFFF" IsHitTestVisible="False"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -94,18 +97,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#2A2A2A" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0.08" Duration="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#1A1A1A" Duration="{StaticResource HoverIn}"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -124,7 +125,10 @@
                             <Border.Background>
                                 <SolidColorBrush Color="#00F87171"/>
                             </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="Press" CornerRadius="8" Margin="0" Opacity="0" Background="#F87171" IsHitTestVisible="False"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -152,18 +156,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#66F87171" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0.35" Duration="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#3AF87171" Duration="{StaticResource HoverIn}"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -190,15 +192,17 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="6">
                             <Border.Background>
                                 <SolidColorBrush Color="#141414"/>
                             </Border.Background>
                             <Border.BorderBrush>
                                 <SolidColorBrush Color="#1E1E1E"/>
                             </Border.BorderBrush>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="Press" CornerRadius="5" Margin="0" Opacity="0" Background="#000000" IsHitTestVisible="False"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -232,18 +236,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#101010" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0.28" Duration="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#1A1A1A" Duration="{StaticResource HoverIn}"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -282,11 +284,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" CornerRadius="6">
                             <Border.Background>
                                 <SolidColorBrush Color="#FFFFFF"/>
                             </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="Press" CornerRadius="6" Margin="0" Opacity="0" Background="#000000" IsHitTestVisible="False"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -313,18 +318,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#C8C8C8" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0.12" Duration="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#E0E0E0" Duration="{StaticResource HoverIn}"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -356,12 +359,14 @@
                         <Border x:Name="Bd"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="6">
                             <Border.Background>
                                 <SolidColorBrush Color="#00F87171"/>
                             </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="Press" CornerRadius="5" Margin="0" Opacity="0" Background="#F87171" IsHitTestVisible="False"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -388,18 +393,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#2A1A1A" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0.16" Duration="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#1C1414" Duration="{StaticResource HoverIn}"/>
+                                            <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>

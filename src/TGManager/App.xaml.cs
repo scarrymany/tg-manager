@@ -23,7 +23,7 @@ public partial class App : System.Windows.Application
         get
         {
             var v = typeof(App).Assembly.GetName().Version;
-            return v is null ? "1.2.0" : $"{v.Major}.{v.Minor}.{v.Build}";
+            return v is null ? "1.2.1" : $"{v.Major}.{v.Minor}.{v.Build}";
         }
     }
 
