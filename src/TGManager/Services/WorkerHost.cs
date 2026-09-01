@@ -47,10 +47,17 @@ public sealed class WorkerHost : IDisposable
         }
     }
 
+    public const string ProxyPassEnv = "TGMANAGER_PROXY_PASS";
+
     public bool Start(Account account, IEnumerable<string> actions, bool revoke, bool dryRun)
     {
         if (IsRunning) return false;
+        try { _proc?.Dispose(); } catch { /* ignore */ }
+        _proc = null;
+
         var workdir = Paths.AccountWorkdir(account.Id);
+        if (IsLocked(workdir) || Launcher.IsRunning(workdir)) return false;
+
         var args = new List<string> { "--workdir", workdir, "--actions", string.Join(",", actions) };
         if (revoke) args.Add("--revoke");
         if (dryRun) args.Add("--dry-run");
@@ -60,8 +67,7 @@ public sealed class WorkerHost : IDisposable
                            "--proxy-port", account.Proxy.Port.ToString()]);
             if (!string.IsNullOrEmpty(account.Proxy.Username))
                 args.AddRange(["--proxy-user", account.Proxy.Username]);
-            if (!string.IsNullOrEmpty(account.Proxy.Password))
-                args.AddRange(["--proxy-pass", account.Proxy.Password]);
+            // пароль — в env, не в командной строке (видно в диспетчере задач)
         }
 
         var psi = new ProcessStartInfo
@@ -77,6 +83,8 @@ public sealed class WorkerHost : IDisposable
         psi.Environment["PYTHONIOENCODING"] = "utf-8";
         psi.Environment["PYTHONUTF8"] = "1";
         psi.Environment["PYTHONUNBUFFERED"] = "1";
+        if (account.Proxy.Enabled && !string.IsNullOrEmpty(account.Proxy.Password))
+            psi.Environment[ProxyPassEnv] = account.Proxy.Password;
 
         if (File.Exists(Paths.WorkerExe))
         {
@@ -131,17 +139,22 @@ public sealed class WorkerHost : IDisposable
         };
 
         _exitRaised = false;
+        // Лок до Start: иначе между процессом и файлом можно запустить Telegram.
+        // Сначала pid GUI (живой), потом pid воркера.
+        WriteLock(workdir, Environment.ProcessId);
         try
         {
             if (!proc.Start())
             {
                 proc.Dispose();
+                ClearLock(workdir);
                 return false;
             }
         }
         catch
         {
             proc.Dispose();
+            ClearLock(workdir);
             return false;
         }
         _proc = proc;
@@ -154,6 +167,20 @@ public sealed class WorkerHost : IDisposable
     public void Stop()
     {
         try { _proc?.Kill(entireProcessTree: true); } catch { /* ignore */ }
+    }
+
+    /// <summary>Дождаться выхода воркера (и хвоста stdout). Лок снимать только после этого.</summary>
+    public bool WaitForExit(int timeoutMs = 10_000)
+    {
+        var p = _proc;
+        if (p is null) return true;
+        try
+        {
+            if (!p.WaitForExit(timeoutMs)) return false;
+            try { p.WaitForExit(); } catch { /* drain redirected streams */ }
+            return true;
+        }
+        catch { return !IsRunning; }
     }
 
     public void Dispose()
@@ -229,8 +256,18 @@ public sealed class WorkerHost : IDisposable
         try
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            var pid = doc.RootElement.TryGetProperty("pid", out var p) ? p.GetInt32() : 0;
-            if (pid > 0 && !Native.NativeMethods.IsAlive(pid))
+            var pid = 0;
+            if (doc.RootElement.TryGetProperty("pid", out var p))
+                p.TryGetInt32(out pid);
+            if (pid <= 0)
+            {
+                // недописанный лок: свежий — занято, старый — снимаем
+                if (DateTime.UtcNow - File.GetLastWriteTimeUtc(path) < TimeSpan.FromSeconds(30))
+                    return true;
+                ClearLock(workdir);
+                return false;
+            }
+            if (!Native.NativeMethods.IsAlive(pid))
             {
                 ClearLock(workdir);
                 return false;
@@ -239,6 +276,13 @@ public sealed class WorkerHost : IDisposable
         }
         catch
         {
+            // Файл есть, но битый/недописанный — fail-closed, пока он свежий.
+            try
+            {
+                if (DateTime.UtcNow - File.GetLastWriteTimeUtc(path) < TimeSpan.FromHours(12))
+                    return true;
+            }
+            catch { /* ignore */ }
             return false;
         }
     }

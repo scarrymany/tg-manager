@@ -28,12 +28,9 @@ public static class ProxyParse
             var creds = s[..at].Split(':', 2);
             user = creds.ElementAtOrDefault(0) ?? "";
             pass = creds.ElementAtOrDefault(1) ?? "";
-            var hp = s[(at + 1)..].Split(':');
-            if (hp.Length < 2) return null;
-            host = hp[0];
-            portStr = hp[1];
+            if (!TrySplitHostPort(s[(at + 1)..], out host, out portStr)) return null;
         }
-        else
+        else if (!TrySplitHostPort(s, out host, out portStr))
         {
             var parts = s.Split(':');
             if (parts.Length == 2) { host = parts[0]; portStr = parts[1]; }
@@ -54,5 +51,28 @@ public static class ProxyParse
             _ => null,
         };
         return new ParsedProxy(host.Trim(), port, user.Trim(), pass, kind);
+    }
+
+    /// <summary>host:port или [IPv6]:port. host:port:user:pass сюда не входит (двоеточий больше одного и нет скобок).</summary>
+    static bool TrySplitHostPort(string hp, out string host, out string portStr)
+    {
+        host = "";
+        portStr = "";
+        if (string.IsNullOrEmpty(hp)) return false;
+        if (hp.StartsWith('['))
+        {
+            var end = hp.IndexOf(']');
+            if (end < 2) return false;
+            host = hp[1..end];
+            if (end + 1 >= hp.Length || hp[end + 1] != ':') return false;
+            portStr = hp[(end + 2)..];
+            return host.Length > 0 && portStr.Length > 0;
+        }
+        var colon = hp.LastIndexOf(':');
+        if (colon <= 0 || colon == hp.Length - 1) return false;
+        if (hp.IndexOf(':') != colon) return false; // IPv6 без скобок — неоднозначно
+        host = hp[..colon];
+        portStr = hp[(colon + 1)..];
+        return true;
     }
 }

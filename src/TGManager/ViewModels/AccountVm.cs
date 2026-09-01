@@ -75,7 +75,7 @@ public sealed class AccountVm : INotifyPropertyChanged
     /// <summary>Перечитывает наличие tdata. Уведомления идут только при реальном изменении.</summary>
     public void RefreshMeta()
     {
-        HasTdata = Directory.Exists(Paths.AccountTdata(Id));
+        HasTdata = Paths.IsSafeAccountId(Id) && Directory.Exists(Paths.AccountTdata(Id));
     }
 
     void RaiseState()

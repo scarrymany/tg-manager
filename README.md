@@ -31,7 +31,7 @@
 
 ## Скачать
 
-**[⬇ TG-Manager-1.2.1.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
+**[⬇ TG-Manager-1.2.2.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
 
 1. Распакуйте в любую папку.
 2. Запустите `TGManager.exe` (`TGWorker.exe` должен лежать рядом).

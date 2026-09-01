@@ -87,10 +87,32 @@ public static class ProcessUtil
                 AddTree(c);
         }
 
+        bool IsTargetName(int pid)
+        {
+            foreach (var r in rows)
+            {
+                if (r.Pid != pid) continue;
+                var name = r.Name.ToLowerInvariant();
+                return TargetNames.Any(t => name.Contains(t));
+            }
+            return false;
+        }
+
+        // pid-файл после выхода Telegram часто остаётся. PID на Windows переиспользуется —
+        // без проверки имени/командной строки Стоп может убить чужой процесс.
+        bool PidFileStillOurs(int pid)
+        {
+            if (pid <= 0 || !IsTargetName(pid)) return false;
+            var cmd = scan.CommandLine(pid);
+            if (string.IsNullOrEmpty(cmd)) return true; // имя наше, cmdline недоступна
+            var low = cmd.ToLowerInvariant();
+            return low.Contains(marker) || low.Contains(markerFwd);
+        }
+
         var pf = ReadPid(workdir, PidFile);
-        if (pf > 0) AddTree(pf);
+        if (PidFileStillOurs(pf)) AddTree(pf);
         var br = ReadPid(workdir, BridgePidFile);
-        if (br > 0) AddTree(br);
+        if (PidFileStillOurs(br)) AddTree(br);
 
         foreach (var row in rows)
         {
@@ -171,21 +193,30 @@ public static class ProcessUtil
         return list;
     }
 
+    // PROCESSINFOCLASS.ProcessCommandLineInformation = 60 (Win 8.1+).
+    // 70 — это ProcessInPrivate; по нему приходит не UNICODE_STRING, и matching
+    // по -workdir никогда не срабатывал.
+    const int ProcessCommandLineInformation = 60;
+
     internal static string? GetCommandLine(int pid)
     {
         var h = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
         if (h == IntPtr.Zero) return null;
         try
         {
-            NtQueryInformationProcess(h, 70, IntPtr.Zero, 0, out var len);
+            NtQueryInformationProcess(h, ProcessCommandLineInformation, IntPtr.Zero, 0, out var len);
             if (len <= 0 || len > 1_000_000) return null;
             var buf = Marshal.AllocHGlobal(len);
             try
             {
-                var status = NtQueryInformationProcess(h, 70, buf, len, out len);
+                var status = NtQueryInformationProcess(h, ProcessCommandLineInformation, buf, len, out len);
                 if (status != 0) return null;
                 var us = Marshal.PtrToStructure<UNICODE_STRING>(buf);
                 if (us.Buffer == IntPtr.Zero || us.Length == 0) return null;
+                // Строка лежит в том же буфере; дикий указатель не читаем.
+                var bufAddr = buf.ToInt64();
+                var strAddr = us.Buffer.ToInt64();
+                if (strAddr < bufAddr || strAddr + us.Length > bufAddr + len) return null;
                 return Marshal.PtrToStringUni(us.Buffer, us.Length / 2);
             }
             finally { Marshal.FreeHGlobal(buf); }

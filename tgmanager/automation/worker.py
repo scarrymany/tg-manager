@@ -165,6 +165,7 @@ async def _collect(client, me_id, cats):
     targets = []
     counts = {"channels": 0, "groups": 0, "private": 0, "bots": 0}
     all_dialogs = 0
+    incomplete = [False]
     for folder in (0, 1):  # 0 = основная, 1 = архив
         for attempt in range(6):
             try:
@@ -185,7 +186,11 @@ async def _collect(client, me_id, cats):
                 emit({"type": "warn", "label": "Сканирование",
                       "error": f"обрыв, повтор обхода (папка {folder})"})
                 await asyncio.sleep(2)
-    return targets, counts
+        else:
+            incomplete[0] = True
+            emit({"type": "warn", "label": "Сканирование",
+                  "error": f"папка {folder} не обойдена полностью после 6 попыток"})
+    return targets, counts, incomplete[0]
 
 
 async def _delete_dialog(client, cat, d, revoke) -> bool:
@@ -227,6 +232,19 @@ async def run(args) -> int:
     tdata = os.path.join(args.workdir, "tdata")
     if not os.path.isdir(tdata):
         emit({"type": "error", "error": "В контейнере нет папки tdata"})
+        return 2
+
+    try:
+        from tgmanager.automation.lock import telegram_running
+    except Exception:
+        try:
+            from lock import telegram_running  # запуск из этой же папки
+        except Exception:
+            telegram_running = None
+    if telegram_running is not None and telegram_running(args.workdir):
+        emit({"type": "error",
+              "error": "Telegram этого контейнера ещё запущен. Сначала «Стоп» — "
+                       "иначе сервер выбросит сессию (AUTH_KEY_DUPLICATED)."})
         return 2
 
     emit({"type": "stage", "msg": "Загрузка tdata…"})
@@ -290,7 +308,10 @@ async def run(args) -> int:
         photos_sel = "photos" in selected
 
         emit({"type": "stage", "msg": "Сканирование диалогов (включая архив)…"})
-        targets, counts = await _collect(client, me.id, loop_cats)
+        targets, counts, scan_incomplete = await _collect(client, me.id, loop_cats)
+        if scan_incomplete:
+            emit({"type": "warn", "label": "Сканирование",
+                  "error": "список диалогов может быть неполным — чистка продолжится с тем, что удалось получить"})
         counts["saved"] = 1 if saved_sel else 0
         extra = (1 if contacts_sel else 0) + (1 if photos_sel else 0) + (1 if saved_sel else 0)
         total = len(targets) + extra
@@ -323,9 +344,15 @@ async def run(args) -> int:
                 emit({"type": "warn", "label": "Проходы",
                       "error": "Достигнут лимит проходов — часть могла остаться"})
                 break
-            targets, _ = await _collect(client, me.id, loop_cats)
+            targets, _, scan_incomplete = await _collect(client, me.id, loop_cats)
             targets = [(c, d) for c, d in targets if d.id not in failed]
             if not targets:
+                if scan_incomplete:
+                    emit({"type": "warn", "label": "Проходы",
+                          "error": "обход оборвался — не считаем список пустым"})
+                    empty_streak = 0
+                    await asyncio.sleep(2)
+                    continue
                 empty_streak += 1
                 if empty_streak >= 2:
                     break
@@ -393,6 +420,8 @@ def main() -> int:
     p.add_argument("--proxy-user", default="")
     p.add_argument("--proxy-pass", default="")
     args = p.parse_args()
+    if not args.proxy_pass:
+        args.proxy_pass = os.environ.get("TGMANAGER_PROXY_PASS", "")
     try:
         return asyncio.run(run(args))
     except KeyboardInterrupt:
