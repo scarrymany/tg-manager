@@ -20,20 +20,36 @@ public sealed class TaskVm : INotifyPropertyChanged
     };
 
     public TaskVm(Account account, IReadOnlyList<string> actions, bool revoke)
+        : this(account, WorkerKind.Cleanup, actions, revoke, outputDir: null)
+    {
+    }
+
+    public TaskVm(Account account, WorkerKind kind, string outputDir)
+        : this(account, kind, Array.Empty<string>(), revoke: false, outputDir)
+    {
+    }
+
+    TaskVm(Account account, WorkerKind kind, IReadOnlyList<string> actions, bool revoke, string? outputDir)
     {
         Account = account;
+        Kind = kind;
         Actions = actions;
         Revoke = revoke;
+        OutputDir = outputDir;
         Host = new WorkerHost();
         Host.Event += OnEvent;
         Host.Exited += OnExited;
     }
 
     public Account Account { get; }
+    public WorkerKind Kind { get; }
     public IReadOnlyList<string> Actions { get; }
     public bool Revoke { get; }
+    public string? OutputDir { get; }
     public WorkerHost Host { get; }
     public string Id => Account.Id;
+    public string ResultZip { get; private set; } = "";
+    public string ResultPhone { get; private set; } = "";
 
     public ObservableCollection<string> Log { get; } = [];
 
@@ -103,10 +119,15 @@ public sealed class TaskVm : INotifyPropertyChanged
         }
     }
 
-    public string ActionsHuman => string.Join(", ", Actions.Select(a => ActionLabels.GetValueOrDefault(a, a)));
+    public string ActionsHuman => Kind == WorkerKind.ExportSession
+        ? "експорт session"
+        : string.Join(", ", Actions.Select(a => ActionLabels.GetValueOrDefault(a, a)));
     public string SubLabel => string.IsNullOrEmpty(Current) ? ActionsHuman : $"{ActionsHuman}  ·  {Current}";
 
-    public bool Start() => Host.Start(Account, Actions, Revoke, dryRun: false);
+    public bool Start()
+        => Kind == WorkerKind.ExportSession
+            ? Host.StartExport(Account, OutputDir ?? Paths.AccountWorkdir(Account.Id))
+            : Host.Start(Account, Actions, Revoke, dryRun: false);
 
     public void Stop()
     {
@@ -156,7 +177,16 @@ public sealed class TaskVm : INotifyPropertyChanged
                 Append($"! {ev.Label}: {ev.Error}");
                 break;
             case "done":
-                Current = ev.DryRun ? "Проверка завершена" : "Готово" + (ev.Skipped > 0 ? $" · пропущено {ev.Skipped}" : "");
+                if (!string.IsNullOrEmpty(ev.Zip))
+                {
+                    ResultZip = ev.Zip;
+                    ResultPhone = ev.Phone ?? "";
+                    Current = "Готово: " + ev.Zip;
+                }
+                else
+                {
+                    Current = ev.DryRun ? "Проверка завершена" : "Готово" + (ev.Skipped > 0 ? $" · пропущено {ev.Skipped}" : "");
+                }
                 break;
             case "error":
                 Error = ev.Error ?? "";

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Воркер автоматизации: чистит аккаунт из tdata через Telethon (opentele).
+"""Воркер автоматизации: чистка tdata и экспорт session-пака через Telethon (opentele).
 
 Запуск отдельным процессом. Пишет прогресс построчным JSON в stdout:
   {"type":"stage","msg":...}
@@ -9,6 +9,10 @@
   {"type":"warn","label":...,"error":...}
   {"type":"done","done":d}
   {"type":"error","error":...}
+
+Команды:
+  (по умолчанию) чистка — --workdir --actions …
+  export-session — tdata → {phone}.session + .json + .zip
 
 БЕЗОПАСНОСТЬ: этот процесс держит Telethon-сессию того же tdata, что и TDesktop.
 Нельзя запускать одновременно с открытым Telegram этого контейнера (иначе выброс
@@ -110,6 +114,47 @@ def _build_proxy(args):
         proxy["password"] = args.proxy_pass
     human = f"{ptype.upper()} {args.proxy_host}:{args.proxy_port}"
     return proxy, human
+
+
+def container_busy_error(workdir: str):
+    """Текст ошибки, если Telegram контейнера ещё жив; иначе None."""
+    try:
+        from tgmanager.automation.lock import telegram_running
+    except Exception:
+        try:
+            from lock import telegram_running  # запуск из этой же папки
+        except Exception:
+            telegram_running = None
+    if telegram_running is not None and telegram_running(workdir):
+        return ("Telegram этого контейнера ещё запущен. Сначала «Стоп» — "
+                "иначе сервер выбросит сессию (AUTH_KEY_DUPLICATED).")
+    return None
+
+
+def load_tdesktop(tdata: str):
+    from opentele.td import TDesktop
+    tdesk = TDesktop(tdata)
+    if not tdesk.isLoaded():
+        raise RuntimeError("Не удалось прочитать tdata (пусто/повреждено)")
+    return tdesk
+
+
+def to_telethon_kwargs(proxy, session=None):
+    """Аргументы TDesktop.ToTelethon. session=None — in-memory (баг StringSession в opentele)."""
+    from opentele.api import UseCurrentSession
+    kwargs = {
+        "session": session,
+        "flag": UseCurrentSession,
+        # устойчивость (особенно через прокси): не терять диалоги на обрывах
+        "connection_retries": 8,
+        "request_retries": 8,
+        "retry_delay": 2,
+        "timeout": 30,
+        "auto_reconnect": True,
+    }
+    if proxy is not None:
+        kwargs["proxy"] = proxy
+    return kwargs
 
 
 def _tdata_error(e: BaseException) -> str:
@@ -222,8 +267,6 @@ async def _delete_dialog(client, cat, d, revoke) -> bool:
 
 
 async def run(args) -> int:
-    from opentele.td import TDesktop
-    from opentele.api import UseCurrentSession
     from telethon.tl.functions.contacts import GetContactsRequest, DeleteContactsRequest
     from telethon.tl.functions.photos import DeletePhotosRequest
     from telethon.tl import types
@@ -234,28 +277,16 @@ async def run(args) -> int:
         emit({"type": "error", "error": "В контейнере нет папки tdata"})
         return 2
 
-    try:
-        from tgmanager.automation.lock import telegram_running
-    except Exception:
-        try:
-            from lock import telegram_running  # запуск из этой же папки
-        except Exception:
-            telegram_running = None
-    if telegram_running is not None and telegram_running(args.workdir):
-        emit({"type": "error",
-              "error": "Telegram этого контейнера ещё запущен. Сначала «Стоп» — "
-                       "иначе сервер выбросит сессию (AUTH_KEY_DUPLICATED)."})
+    busy = container_busy_error(args.workdir)
+    if busy:
+        emit({"type": "error", "error": busy})
         return 2
 
     emit({"type": "stage", "msg": "Загрузка tdata…"})
     try:
-        tdesk = TDesktop(tdata)
-        loaded = tdesk.isLoaded()
+        tdesk = load_tdesktop(tdata)
     except BaseException as e:  # opentele бросает подклассы BaseException
         emit({"type": "error", "error": _tdata_error(e)})
-        return 2
-    if not loaded:
-        emit({"type": "error", "error": "Не удалось прочитать tdata (пусто/повреждено)"})
         return 2
 
     proxy, proxy_human = _build_proxy(args)
@@ -270,16 +301,8 @@ async def run(args) -> int:
     emit({"type": "stage", "msg": f"Подключение к Telegram ({proxy_human})…"})
     # session=None → Telethon делает in-memory сессию (без файла). Передавать
     # StringSession-объект нельзя: в opentele баг (UnboundLocalError auth_session).
-    to_telethon_kwargs = {
-        "session": None, "flag": UseCurrentSession,
-        # устойчивость (особенно через прокси): не терять диалоги на обрывах
-        "connection_retries": 8, "request_retries": 8, "retry_delay": 2,
-        "timeout": 30, "auto_reconnect": True,
-    }
-    if proxy is not None:
-        to_telethon_kwargs["proxy"] = proxy
     try:
-        client = await tdesk.ToTelethon(**to_telethon_kwargs)
+        client = await tdesk.ToTelethon(**to_telethon_kwargs(proxy, session=None))
     except BaseException as e:
         emit({"type": "error", "error": _tdata_error(e)})
         return 2
@@ -409,6 +432,12 @@ async def run(args) -> int:
 
 def main() -> int:
     _force_utf8_stdio()
+    if len(sys.argv) > 1 and sys.argv[1] in ("export-session", "export_session"):
+        try:
+            from tgmanager.automation.export_session import export_main
+        except ImportError:
+            from export_session import export_main  # запуск из этой же папки
+        return export_main(sys.argv[2:])
     p = argparse.ArgumentParser()
     p.add_argument("--workdir", required=True)
     p.add_argument("--actions", default="")

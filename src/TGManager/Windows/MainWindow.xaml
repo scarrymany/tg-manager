@@ -5,7 +5,7 @@
         xmlns:vm="clr-namespace:TGManager.ViewModels"
         Title="TG Manager"
         Width="1080" Height="720"
-        MinWidth="920" MinHeight="560"
+        MinWidth="980" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -129,13 +129,27 @@
                         <ItemsControl x:Name="AccountList" Margin="16">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:AccountVm}">
-                                    <Border Background="{StaticResource CardBrush}"
-                                            BorderBrush="{StaticResource HairlineBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Margin="0,0,0,10"
-                                            Height="60"
-                                            Padding="12,8">
+                    <Border Background="{StaticResource CardBrush}"
+                            BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Margin="0,0,0,10"
+                            Height="60"
+                            Padding="12,8">
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Експорт session" Tag="{Binding Id}" Click="OnExportSession"
+                                                          IsEnabled="{Binding CanExport}"/>
+                                                <MenuItem Header="Папка контейнера" Tag="{Binding Id}" Click="OnFolder"/>
+                                                <MenuItem Header="Автоматизация (чистка)" Tag="{Binding Id}" Click="OnCleanup"
+                                                          IsEnabled="{Binding CanCleanup}"/>
+                                                <Separator/>
+                                                <MenuItem Header="Изменить" Tag="{Binding Id}" Click="OnEdit"
+                                                          IsEnabled="{Binding CanEdit}"/>
+                                                <MenuItem Header="Удалить" Tag="{Binding Id}" Click="OnDelete"
+                                                          IsEnabled="{Binding CanEdit}"/>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
                                         <Border.RenderTransform>
                                             <TranslateTransform Y="0"/>
                                         </Border.RenderTransform>
@@ -164,12 +178,15 @@
                                                 <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusFg}"/>
                                             </Border>
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Width="104" Padding="0,8" Margin="0,0,6,0"
+                                                <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Width="96" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanLaunch}" Tag="{Binding Id}" Click="OnLaunch"/>
-                                                <Button Style="{StaticResource StopButton}" Content="■  Стоп" Width="84" Padding="0,8" Margin="0,0,6,0"
+                                                <Button Style="{StaticResource StopButton}" Content="■  Стоп" Width="80" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="📁  Папка" Width="96" Padding="0,8" Margin="0,0,6,0"
+                                                <Button Style="{StaticResource GhostButton}" Content="📁  Папка" Width="84" Padding="0,8" Margin="0,0,6,0"
                                                         Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку — сюда положите tdata"/>
+                                                <Button Style="{StaticResource GhostButton}" Content="Експорт" Width="82" Padding="0,8" Margin="0,0,6,0"
+                                                        IsEnabled="{Binding CanExport}" Tag="{Binding Id}" Click="OnExportSession"
+                                                        ToolTip="Експорт session — Telethon {phone}.session + .json + zip"/>
                                                 <Button Style="{StaticResource IconButton}" Content="🧹" Tag="{Binding Id}" Click="OnCleanup"
                                                         IsEnabled="{Binding CanCleanup}" ToolTip="Автоматизация (чистка)" Margin="0,0,6,0"/>
                                                 <Button Style="{StaticResource IconButton}" Content="✏" Tag="{Binding Id}" Click="OnEdit"
@@ -267,7 +284,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку контейнера — задача появится здесь."
+                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку или експорт session — задача появится здесь."
                                    TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"
                                    Foreground="{StaticResource SubtleBrush}"
                                    Visibility="{Binding HasTasks, Converter={StaticResource InvBoolToVis}}"/>

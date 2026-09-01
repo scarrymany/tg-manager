@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using TGManager.Services;
 using TGManager.ViewModels;
 
@@ -160,7 +161,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var running = vm?.Running == true || Launcher.IsRunning(workdir);
         var taskRunning = _tasks.TryGetValue(id, out var task) && task.IsRunning;
         var info = (running ? "Контейнер будет остановлен.\n" : "") +
-                   (taskRunning ? "Идущая чистка будет прервана.\n" : "") +
+                   (taskRunning ? "Идущая задача будет прервана.\n" : "") +
                    "Также удалить папку с данными (tdata)?\n«Нет» — оставить папку на диске.";
         var choice = ConfirmWindow.AskDelete(this, $"Удалить «{acc.Name}»?", info);
         if (choice == ConfirmWindow.Choice.Cancel) return;
@@ -225,7 +226,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (WorkerHost.IsLocked(workdir) || (_tasks.TryGetValue(id, out var t) && t.IsRunning))
         {
             ConfirmWindow.Info(this, "Идёт автоматизация",
-                "Сейчас выполняется чистка этого контейнера. Запуск заблокирован до завершения.");
+                "Сейчас выполняется чистка или експорт этого контейнера. Запуск заблокирован до завершения.");
             return;
         }
         if (Launcher.IsRunning(workdir))
@@ -353,7 +354,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (WorkerHost.IsLocked(workdir))
         {
             ConfirmWindow.Info(this, "Идёт автоматизация",
-                "Этот контейнер уже занят чисткой или проверкой. Дождитесь завершения.");
+                "Этот контейнер уже занят чисткой, експортом или проверкой. Дождитесь завершения.");
             return;
         }
         if (!WorkerHost.WorkerAvailable())
@@ -396,9 +397,141 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         _tasks[acc.Id] = vm;
         Tasks.Insert(0, vm);
-        if (Find(acc.Id) is { } avm) avm.Busy = true;
+        if (Find(acc.Id) is { } avm)
+        {
+            avm.BusyLabel = "Чистка…";
+            avm.Busy = true;
+        }
         RefreshTasksNav();
         OnNavTasks(this, new RoutedEventArgs());
+    }
+
+    void OnExportSession(object sender, RoutedEventArgs e)
+    {
+        if (IdOf(sender) is not { } id) return;
+        var acc = _store.Get(id);
+        if (acc is null) return;
+        if (_tasks.TryGetValue(id, out var existing) && existing.IsRunning)
+        {
+            OnNavTasks(sender, e);
+            return;
+        }
+        var workdir = Paths.AccountWorkdir(id);
+        if (Launcher.IsRunning(workdir))
+        {
+            ConfirmWindow.Info(this, "Telegram запущен",
+                "Сначала остановите Telegram этого контейнера («Стоп») — иначе сессию выбросит при конвертации tdata.");
+            return;
+        }
+        if (WorkerHost.IsLocked(workdir))
+        {
+            ConfirmWindow.Info(this, "Идёт автоматизация",
+                "Этот контейнер уже занят чисткой, експортом или проверкой. Дождитесь завершения.");
+            return;
+        }
+        if (!WorkerHost.WorkerAvailable())
+        {
+            ConfirmWindow.Info(this, "Нет воркера",
+                "Рядом с программой должен лежать TGWorker.exe (есть в релизе).\nЛибо установите Python 3.10+ с telethon и opentele-ng.");
+            return;
+        }
+        if (!Directory.Exists(Paths.AccountTdata(id)))
+        {
+            ConfirmWindow.Info(this, "Нет tdata", "В контейнере нет папки tdata — нечего экспортировать.");
+            return;
+        }
+        if (!ConfirmWindow.Ask(this, "Експорт session",
+                "Сконвертировать tdata в Telethon-пак SCARP_CC:\n" +
+                "{phone}.session + {phone}.json + {phone}.zip.\n\n" +
+                "Telegram этого контейнера должен быть закрыт (иначе AUTH_KEY_DUPLICATED).\n" +
+                "2FA в пак попадёт, только если пароль известен — в контейнере он не хранится, файл 2FA.txt не пишется.",
+                yes: "Експорт"))
+            return;
+
+        var dest = PickExportDir(workdir);
+        if (string.IsNullOrWhiteSpace(dest)) return;
+        StartExportTask(acc, dest);
+        PollStatus();
+    }
+
+    string? PickExportDir(string fallback)
+    {
+        try
+        {
+            var dlg = new OpenFolderDialog
+            {
+                Title = "Куда сохранить session-пак ({phone}.zip)",
+                InitialDirectory = Directory.Exists(fallback) ? fallback : Paths.AccountsDir,
+                Multiselect = false,
+            };
+            return dlg.ShowDialog(this) == true ? dlg.FolderName : null;
+        }
+        catch
+        {
+            if (ConfirmWindow.Ask(this, "Папка экспорта",
+                    "Диалог папки недоступен. Сохранить в папку контейнера?\n" + fallback,
+                    yes: "Сохранить"))
+                return fallback;
+            return null;
+        }
+    }
+
+    void StartExportTask(Account acc, string outputDir)
+    {
+        if (_tasks.TryGetValue(acc.Id, out var old))
+        {
+            if (!old.Finished) return;
+            Tasks.Remove(old);
+            _tasks.Remove(acc.Id);
+            CloseLogWindow(acc.Id);
+        }
+        var vm = new TaskVm(acc, WorkerKind.ExportSession, outputDir);
+        vm.PropertyChanged += (_, a) =>
+        {
+            if (a.PropertyName is not nameof(TaskVm.State)) return;
+            RefreshTasksNav();
+            if (vm.State == "done" && !string.IsNullOrEmpty(vm.ResultZip))
+            {
+                Status("Експорт готов: " + vm.ResultZip);
+                RevealInExplorer(vm.ResultZip);
+            }
+        };
+        if (!vm.Start())
+        {
+            ConfirmWindow.Info(this, "Не удалось запустить", "Воркер експорта не стартовал.");
+            vm.Host.Dispose();
+            return;
+        }
+        _tasks[acc.Id] = vm;
+        Tasks.Insert(0, vm);
+        if (Find(acc.Id) is { } avm)
+        {
+            avm.BusyLabel = "Експорт…";
+            avm.Busy = true;
+        }
+        RefreshTasksNav();
+        OnNavTasks(this, new RoutedEventArgs());
+    }
+
+    static void RevealInExplorer(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = "/select,\"" + path + "\"",
+                    UseShellExecute = true,
+                });
+                return;
+            }
+            var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                Process.Start(new ProcessStartInfo { FileName = dir, UseShellExecute = true });
+        }
+        catch { /* ignore */ }
     }
 
     void OnTaskLog(object sender, RoutedEventArgs e)

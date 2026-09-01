@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller: TGWorker.exe — чистка tdata (Telethon + opentele-ng), без Qt."""
+"""PyInstaller: TGWorker.exe — чистка/экспорт tdata (Telethon + opentele-ng), без Qt."""
 import os
 
 from PyInstaller.utils.hooks import collect_all
@@ -25,6 +25,8 @@ hiddenimports = [
     "tgmanager",
     "tgmanager.automation",
     "tgmanager.automation.worker",
+    "tgmanager.automation.export_session",
+    "tgmanager.automation.session_pack",
     "tgmanager.automation.lock",
     "tgmanager.automation.deps",
     "tgmanager.automation._patch_opentele",
