@@ -23,10 +23,12 @@ public static class WindowCorners
         if (window.WindowState == WindowState.Maximized)
         {
             frame.CornerRadius = new CornerRadius(0);
+            frame.BorderThickness = new Thickness(0);
             frame.Clip = null;
             return;
         }
         frame.CornerRadius = new CornerRadius(Radius);
+        frame.BorderThickness = new Thickness(1);
         var w = frame.ActualWidth;
         var h = frame.ActualHeight;
         if (w < 1 || h < 1)

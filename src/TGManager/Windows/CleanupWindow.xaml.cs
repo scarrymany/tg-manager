@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using TGManager.Services;
 
@@ -12,7 +13,7 @@ public partial class CleanupWindow : Window
     readonly string _workdir;
     WorkerHost? _host;
     bool _running;
-    bool _dry;
+    bool _failed;
 
     public CleanupRequest? Requested { get; private set; }
 
@@ -23,6 +24,7 @@ public partial class CleanupWindow : Window
         InitializeComponent();
         Chrome.Attach(this, WindowFrame);
         TitleText.Text = $"Автоматизация — «{account.Name}»";
+        Title = TitleText.Text;
         ConnLabel.Text = account.Proxy.Enabled
             ? "Подключение: через " + account.Proxy.Summary()
             : "Подключение: напрямую (у контейнера не задан прокси)";
@@ -31,6 +33,13 @@ public partial class CleanupWindow : Window
             if (_running) _host?.Stop();
             WorkerHost.ClearLock(_workdir);
             _host?.Dispose();
+            _host = null;
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            OnClose(this, new RoutedEventArgs());
+            e.Handled = true;
         };
     }
 
@@ -78,7 +87,8 @@ public partial class CleanupWindow : Window
         }
         if (!ConfirmWindow.Ask(this, "Подтверждение",
                 "Запустить необратимую чистку выбранных разделов в фоне?\nРазделы: " + string.Join(", ", actions)
-                + (ChkRevoke.IsChecked == true ? "\nЛичные — с revoke (у обеих сторон)." : "")))
+                + (ChkRevoke.IsChecked == true ? "\nЛичные — с revoke (у обеих сторон)." : ""),
+                yes: "Запустить"))
             return;
         Requested = new CleanupRequest(actions, ChkRevoke.IsChecked == true);
         DialogResult = true;
@@ -109,9 +119,10 @@ public partial class CleanupWindow : Window
             return;
         }
 
-        _dry = true;
+        _failed = false;
         LogBox.Clear();
         Bar.IsIndeterminate = true;
+        Bar.Value = 0;
         StatusLabel.Text = "Проверка…";
         StatusLabel.Foreground = (Brush)FindResource("MutedBrush");
         _running = true;
@@ -119,12 +130,14 @@ public partial class CleanupWindow : Window
         CloseBtn.Content = "Остановить";
 
         _host?.Dispose();
-        _host = new WorkerHost();
-        _host.Event += ev => Dispatcher.BeginInvoke(() => Handle(ev));
-        _host.Exited += _ => Dispatcher.BeginInvoke(Finished);
-        if (!_host.Start(_account, actions, ChkRevoke.IsChecked == true, dryRun: true))
+        var host = new WorkerHost();
+        _host = host;
+        host.Event += ev => Dispatcher.BeginInvoke(() => { if (ReferenceEquals(_host, host)) Handle(ev); });
+        host.Exited += _ => Dispatcher.BeginInvoke(() => { if (ReferenceEquals(_host, host)) Finished(); });
+        if (!host.Start(_account, actions, ChkRevoke.IsChecked == true, dryRun: true))
         {
             ConfirmWindow.Info(this, "Не удалось запустить", "Воркер не стартовал.");
+            _failed = true;
             Finished();
         }
     }
@@ -175,6 +188,7 @@ public partial class CleanupWindow : Window
                 StatusLabel.Foreground = (Brush)FindResource("GreenBrush");
                 break;
             case "error":
+                _failed = true;
                 Append("✗ " + ev.Error);
                 StatusLabel.Text = "Ошибка: " + ev.Error;
                 StatusLabel.Foreground = (Brush)FindResource("RedBrush");
@@ -191,10 +205,14 @@ public partial class CleanupWindow : Window
         _running = false;
         Bar.IsIndeterminate = false;
         if (Bar.Maximum <= 0) Bar.Maximum = 1;
-        Bar.Value = Bar.Maximum;
+        Bar.Value = _failed ? 0 : Bar.Maximum;
+        if (_failed && StatusLabel.Foreground != (Brush)FindResource("RedBrush") && StatusLabel.Text.StartsWith("Проверка"))
+        {
+            StatusLabel.Text = "Проверка прервана.";
+            StatusLabel.Foreground = (Brush)FindResource("YellowBrush");
+        }
         SetInputs(true);
         CloseBtn.Content = "Закрыть";
-        if (!_dry) ConfirmChk.IsChecked = false;
         _host?.Dispose();
         _host = null;
     }
@@ -203,11 +221,11 @@ public partial class CleanupWindow : Window
     {
         if (_running)
         {
-            if (!ConfirmWindow.Ask(this, "Остановить?", "Остановить процесс автоматизации?"))
+            if (!ConfirmWindow.Ask(this, "Остановить?", "Остановить проверку?", yes: "Остановить"))
                 return;
+            _failed = true;
             _host?.Stop();
             WorkerHost.ClearLock(_workdir);
-            _running = false;
             return;
         }
         DialogResult = Requested is not null;

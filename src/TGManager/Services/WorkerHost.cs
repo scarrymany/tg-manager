@@ -26,6 +26,7 @@ public sealed class WorkerEvent
 public sealed class WorkerHost : IDisposable
 {
     Process? _proc;
+    bool _exitRaised;
 
     static readonly JsonSerializerOptions JsonOpt = new()
     {
@@ -34,7 +35,17 @@ public sealed class WorkerHost : IDisposable
 
     public event Action<WorkerEvent>? Event;
     public event Action<int>? Exited;
-    public bool IsRunning => _proc is { HasExited: false };
+
+    public bool IsRunning
+    {
+        get
+        {
+            var p = _proc;
+            if (p is null) return false;
+            try { return !p.HasExited; }
+            catch { return false; }
+        }
+    }
 
     public bool Start(Account account, IEnumerable<string> actions, bool revoke, bool dryRun)
     {
@@ -82,35 +93,61 @@ public sealed class WorkerHost : IDisposable
         }
         foreach (var a in args) psi.ArgumentList.Add(a);
 
-        _proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
-        _proc.OutputDataReceived += (_, e) =>
+        var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+        proc.OutputDataReceived += (_, e) =>
         {
             if (string.IsNullOrEmpty(e.Data)) return;
-            try
+            var line = e.Data.Trim();
+            if (line.StartsWith('{'))
             {
-                var ev = JsonSerializer.Deserialize<WorkerEvent>(e.Data, JsonOpt);
-                if (ev is not null) Event?.Invoke(ev);
+                try
+                {
+                    var ev = JsonSerializer.Deserialize<WorkerEvent>(line, JsonOpt);
+                    if (ev is not null && !string.IsNullOrEmpty(ev.Type))
+                    {
+                        Event?.Invoke(ev);
+                        return;
+                    }
+                }
+                catch { /* не JSON — ниже как строка лога */ }
             }
-            catch
-            {
-                Event?.Invoke(new WorkerEvent { Type = "log", Msg = e.Data });
-            }
+            Event?.Invoke(new WorkerEvent { Type = "log", Msg = e.Data });
         };
-        _proc.ErrorDataReceived += (_, e) =>
+        proc.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
                 Event?.Invoke(new WorkerEvent { Type = "log", Msg = e.Data });
         };
-        _proc.Exited += (_, _) =>
+        proc.Exited += (_, _) =>
         {
+            // Exited может прийти раньше последних строк stdout. Ждём EOF потоков,
+            // чтобы «done»/«error» не потерялись, и только потом сообщаем наверх.
             var code = 1;
-            try { code = _proc?.ExitCode ?? 1; } catch { /* ignore */ }
+            try { proc.WaitForExit(); } catch { /* ignore */ }
+            try { code = proc.ExitCode; } catch { /* ignore */ }
+            if (_exitRaised) return;
+            _exitRaised = true;
             Exited?.Invoke(code);
         };
-        if (!_proc.Start()) return false;
-        WriteLock(workdir, _proc.Id);
-        _proc.BeginOutputReadLine();
-        _proc.BeginErrorReadLine();
+
+        _exitRaised = false;
+        try
+        {
+            if (!proc.Start())
+            {
+                proc.Dispose();
+                return false;
+            }
+        }
+        catch
+        {
+            proc.Dispose();
+            return false;
+        }
+        _proc = proc;
+        WriteLock(workdir, proc.Id);
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
         return true;
     }
 
@@ -121,15 +158,21 @@ public sealed class WorkerHost : IDisposable
 
     public void Dispose()
     {
-        try { _proc?.Dispose(); } catch { /* ignore */ }
+        var p = _proc;
         _proc = null;
+        try { p?.Dispose(); } catch { /* ignore */ }
     }
 
     public static bool WorkerAvailable()
         => File.Exists(Paths.WorkerExe) || FindPython() is not null;
 
+    static string? _pythonCache;
+    static bool _pythonProbed;
+
+    /// <summary>Ищет python/py. Результат кэшируется: проба запускает процесс и стоит до 3 с.</summary>
     static string? FindPython()
     {
+        if (_pythonProbed) return _pythonCache;
         foreach (var name in new[] { "python", "py" })
         {
             try
@@ -139,19 +182,29 @@ public sealed class WorkerHost : IDisposable
                     FileName = name,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     CreateNoWindow = true,
                 };
                 if (name == "py") psi.ArgumentList.Add("-3");
                 psi.ArgumentList.Add("-c");
-                psi.ArgumentList.Add("print(1)");
+                psi.ArgumentList.Add("import telethon, opentele");
                 using var p = Process.Start(psi);
                 if (p is null) continue;
-                p.WaitForExit(3000);
-                if (p.ExitCode == 0) return name;
+                if (!p.WaitForExit(5000))
+                {
+                    try { p.Kill(); } catch { /* ignore */ }
+                    continue;
+                }
+                if (p.ExitCode == 0)
+                {
+                    _pythonCache = name;
+                    break;
+                }
             }
             catch { /* skip */ }
         }
-        return null;
+        _pythonProbed = true;
+        return _pythonCache;
     }
 
     static void WriteLock(string workdir, int pid)

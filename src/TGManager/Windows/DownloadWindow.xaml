@@ -25,7 +25,7 @@
                        Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
             <StackPanel Grid.Row="1" Margin="22,8,22,8">
                 <TextBlock x:Name="HintText" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,12"/>
-                <ProgressBar x:Name="Bar" Height="6" IsIndeterminate="True" Margin="0,0,0,12"/>
+                <ProgressBar x:Name="Bar" Height="6" IsIndeterminate="True" Minimum="0" Maximum="1" Margin="0,0,0,12"/>
                 <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="140" IsReadOnly="True"
                          FontFamily="{StaticResource MonoFont}" FontSize="12" VerticalScrollBarVisibility="Auto"
                          AcceptsReturn="True" TextWrapping="Wrap"/>

@@ -28,6 +28,17 @@
     <Window.Resources>
         <svc:BoolToVis x:Key="BoolToVis"/>
         <svc:InvBoolToVis x:Key="InvBoolToVis"/>
+
+        <!-- Появление карточки в списке -->
+        <Storyboard x:Key="CardEnter">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                             From="8" To="0" Duration="0:0:0.22">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
     </Window.Resources>
 
     <Border x:Name="WindowFrame"
@@ -63,13 +74,22 @@
                                 Content="＋  Добавить контейнер"
                                 Margin="0,0,8,0"
                                 Padding="14,8"
-                                Click="OnAddAccount"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                                Click="OnAddAccount"/>
                         <Button Style="{StaticResource GhostButton}"
                                 Content="⚙  Настройки"
                                 Margin="0,0,8,0"
-                                Click="OnOpenSettings"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                                Click="OnOpenSettings"/>
+                        <Button Style="{StaticResource ChromeButton}" Click="OnGitHub" ToolTip="Исходники на GitHub">
+                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Width="16" Height="16" Stretch="Uniform"
+                                  Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                        </Button>
+                        <Button Style="{StaticResource ChromeButton}" Click="OnTelegram" ToolTip="Разработчик в Telegram — @yeet17" Margin="0,0,6,0">
+                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Width="17" Height="17" Stretch="Uniform"
+                                  Data="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        </Button>
+                        <Border Width="1" Height="18" Background="{StaticResource HairlineStrongBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <Button Style="{StaticResource ChromeButton}" Click="OnMinimize" ToolTip="Свернуть">
                             <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                   StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -116,6 +136,14 @@
                                             Margin="0,0,0,10"
                                             Height="60"
                                             Padding="12,8">
+                                        <Border.RenderTransform>
+                                            <TranslateTransform Y="0"/>
+                                        </Border.RenderTransform>
+                                        <Border.Triggers>
+                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                <BeginStoryboard Storyboard="{StaticResource CardEnter}"/>
+                                            </EventTrigger>
+                                        </Border.Triggers>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -125,7 +153,8 @@
                                             </Grid.ColumnDefinitions>
                                             <Border Width="3" Height="36" CornerRadius="2" Background="{Binding ColorBrush}" VerticalAlignment="Center"/>
                                             <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource FgBrush}"/>
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource FgBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                     <TextBlock Text="{Binding MetaLeft}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBlock Text="{Binding TdataLabel}" FontSize="12" Foreground="{Binding TdataBrush}"/>
@@ -144,9 +173,9 @@
                                                 <Button Style="{StaticResource IconButton}" Content="🧹" Tag="{Binding Id}" Click="OnCleanup"
                                                         IsEnabled="{Binding CanCleanup}" ToolTip="Автоматизация (чистка)" Margin="0,0,6,0"/>
                                                 <Button Style="{StaticResource IconButton}" Content="✏" Tag="{Binding Id}" Click="OnEdit"
-                                                        ToolTip="Изменить" Margin="0,0,6,0"/>
+                                                        IsEnabled="{Binding CanEdit}" ToolTip="Изменить" Margin="0,0,6,0"/>
                                                 <Button Style="{StaticResource DangerButton}" Width="34" Height="34" Padding="0" Content="🗑"
-                                                        Tag="{Binding Id}" Click="OnDelete" ToolTip="Удалить"/>
+                                                        IsEnabled="{Binding CanEdit}" Tag="{Binding Id}" Click="OnDelete" ToolTip="Удалить"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -196,6 +225,14 @@
                                                 Margin="0,0,0,10"
                                                 Height="66"
                                                 Padding="12,8">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform Y="0"/>
+                                            </Border.RenderTransform>
+                                            <Border.Triggers>
+                                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                    <BeginStoryboard Storyboard="{StaticResource CardEnter}"/>
+                                                </EventTrigger>
+                                            </Border.Triggers>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
@@ -208,7 +245,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <Border Width="3" Height="42" CornerRadius="2" Background="{Binding ColorBrush}"/>
                                                 <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding SubLabel}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
                                                 <ProgressBar Grid.Column="2" Height="6" VerticalAlignment="Center" Margin="0,0,10,0"
@@ -239,8 +276,12 @@
             </Grid>
 
             <Border Grid.Row="3" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
-                <TextBlock x:Name="StatusText" Text="TG Manager 1.1.0" Margin="16,0"
-                           VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource SubtleBrush}"/>
+                <Grid Margin="16,0">
+                    <TextBlock x:Name="StatusText" Text="TG Manager" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{StaticResource SubtleBrush}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="VersionText" Text="" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{StaticResource SubtleBrush}"/>
+                </Grid>
             </Border>
         </Grid>
     </Border>

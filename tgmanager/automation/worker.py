@@ -260,9 +260,24 @@ async def run(args) -> int:
     }
     if proxy is not None:
         to_telethon_kwargs["proxy"] = proxy
-    client = await tdesk.ToTelethon(**to_telethon_kwargs)
+    try:
+        client = await tdesk.ToTelethon(**to_telethon_kwargs)
+    except BaseException as e:
+        emit({"type": "error", "error": _tdata_error(e)})
+        return 2
     client.flood_sleep_threshold = FLOOD_AUTOSLEEP
-    await client.connect()
+    try:
+        await client.connect()
+    except BaseException as e:
+        where = "через прокси " + proxy_human if proxy is not None else "напрямую"
+        emit({"type": "error",
+              "error": f"Не удалось подключиться к Telegram ({where}): {e.__class__.__name__}: {e}. "
+                       "Проверьте прокси/интернет."})
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+        return 2
     try:
         if not await client.is_user_authorized():
             emit({"type": "error", "error": "Сессия не авторизована (нужен вход в аккаунт)"})

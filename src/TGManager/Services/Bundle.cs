@@ -4,6 +4,11 @@ using System.Net.Http;
 
 namespace TGManager.Services;
 
+public readonly record struct DownloadProgress(long Read, long Total)
+{
+    public double Fraction => Total > 0 ? Math.Clamp((double)Read / Total, 0, 1) : 0;
+}
+
 public static class Bundle
 {
     public const string TelegramUrl = "https://telegram.org/dl/desktop/win64_portable";
@@ -12,14 +17,15 @@ public static class Bundle
 
     static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromMinutes(5),
-        DefaultRequestHeaders = { { "User-Agent", "TGManager/1.1 (+https://github.com/scarrymany/tg-manager)" } },
+        // Таймаут — только на заголовки; тело качаем потоком и отменяем через CancellationToken.
+        Timeout = TimeSpan.FromSeconds(60),
+        DefaultRequestHeaders = { { "User-Agent", "TGManager/1.2 (+https://github.com/scarrymany/tg-manager)" } },
     };
 
     public static bool TelegramReady() => File.Exists(Paths.TelegramExe);
     public static bool ProxychainsReady() => File.Exists(Paths.ProxychainsExe);
 
-    public static async Task DownloadTelegram(Action<string> log, CancellationToken ct = default)
+    public static async Task DownloadTelegram(Action<string> log, Action<DownloadProgress>? progress = null, CancellationToken ct = default)
     {
         Paths.EnsureDirs();
         Directory.CreateDirectory(Paths.TelegramDir);
@@ -29,25 +35,28 @@ public static class Bundle
         {
             var zip = Path.Combine(tmp, "telegram.zip");
             log("Скачиваю официальный Telegram Desktop (win64 portable)…");
-            await Download(TelegramUrl, zip, log, "Telegram", ct);
+            await Download(TelegramUrl, zip, log, "Telegram", progress, ct);
             log("Распаковываю…");
             var extract = Path.Combine(tmp, "extract");
-            ZipFile.ExtractToDirectory(zip, extract, overwriteFiles: true);
+            await Task.Run(() => ZipFile.ExtractToDirectory(zip, extract, overwriteFiles: true), ct);
             var exe = FindFile(extract, "Telegram.exe");
             if (exe is null) throw new InvalidOperationException("В архиве не найден Telegram.exe");
             var srcDir = Path.GetDirectoryName(exe)!;
-            foreach (var item in Directory.GetFileSystemEntries(srcDir))
+            await Task.Run(() =>
             {
-                var dest = Path.Combine(Paths.TelegramDir, Path.GetFileName(item));
-                if (Directory.Exists(item))
+                foreach (var item in Directory.GetFileSystemEntries(srcDir))
                 {
-                    if (Directory.Exists(dest)) Directory.Delete(dest, true);
-                    CopyDir(item, dest);
+                    var dest = Path.Combine(Paths.TelegramDir, Path.GetFileName(item));
+                    if (Directory.Exists(item))
+                    {
+                        if (Directory.Exists(dest)) Directory.Delete(dest, true);
+                        CopyDir(item, dest);
+                    }
+                    else File.Copy(item, dest, true);
                 }
-                else File.Copy(item, dest, true);
-            }
-            if (!File.Exists(Paths.TelegramExe))
-                File.Copy(exe, Paths.TelegramExe, true);
+                if (!File.Exists(Paths.TelegramExe))
+                    File.Copy(exe, Paths.TelegramExe, true);
+            }, ct);
             log("✓ Готово: " + Paths.TelegramExe);
         }
         finally
@@ -56,7 +65,7 @@ public static class Bundle
         }
     }
 
-    public static async Task DownloadProxychains(Action<string> log, CancellationToken ct = default)
+    public static async Task DownloadProxychains(Action<string> log, Action<DownloadProgress>? progress = null, CancellationToken ct = default)
     {
         Paths.EnsureDirs();
         Directory.CreateDirectory(Paths.ProxychainsDir);
@@ -66,9 +75,9 @@ public static class Bundle
         {
             var zip = Path.Combine(tmp, "pc.zip");
             log("Скачиваю прокси-обёртку для Windows (ProxyChains)…");
-            await Download(ProxychainsUrl, zip, log, "ProxyChains", ct);
+            await Download(ProxychainsUrl, zip, log, "ProxyChains", progress, ct);
             log("Распаковываю…");
-            ZipFile.ExtractToDirectory(zip, Paths.ProxychainsDir, overwriteFiles: true);
+            await Task.Run(() => ZipFile.ExtractToDirectory(zip, Paths.ProxychainsDir, overwriteFiles: true), ct);
             if (!File.Exists(Paths.ProxychainsExe))
             {
                 var found = FindFile(Paths.ProxychainsDir, "proxychains_win32_x64.exe")
@@ -84,7 +93,8 @@ public static class Bundle
         }
     }
 
-    static async Task Download(string url, string dest, Action<string> log, string label, CancellationToken ct)
+    static async Task Download(string url, string dest, Action<string> log, string label,
+        Action<DownloadProgress>? progress, CancellationToken ct)
     {
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
@@ -93,17 +103,36 @@ public static class Bundle
         await using var output = File.Create(dest);
         var buf = new byte[256 * 1024];
         long read = 0;
+        var lastPct = -1;
+        var lastLogKb = -1L;
         while (true)
         {
             var n = await input.ReadAsync(buf, ct);
             if (n == 0) break;
             await output.WriteAsync(buf.AsMemory(0, n), ct);
             read += n;
+            progress?.Invoke(new DownloadProgress(read, total));
             if (total > 0)
-                log($"↓ {label}: {(int)(read * 100 / total)}% ({read / (1024 * 1024)} / {total / (1024 * 1024)} МБ)");
+            {
+                var pct = (int)(read * 100 / total);
+                if (pct / 10 != lastPct / 10 || pct == 100)
+                {
+                    lastPct = pct;
+                    log($"↓ {label}: {pct}% ({read / (1024 * 1024)} / {total / (1024 * 1024)} МБ)");
+                }
+            }
             else
-                log($"↓ {label}: {read / 1024} КБ");
+            {
+                var kb = read / 1024;
+                if (kb / 2048 != lastLogKb / 2048)
+                {
+                    lastLogKb = kb;
+                    log($"↓ {label}: {kb} КБ");
+                }
+            }
         }
+        if (total > 0 && read < total)
+            throw new IOException($"Скачано {read} из {total} байт — соединение оборвалось.");
     }
 
     static string? FindFile(string root, string name)

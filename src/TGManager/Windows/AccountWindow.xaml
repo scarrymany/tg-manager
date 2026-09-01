@@ -1,8 +1,9 @@
 <Window x:Class="TGManager.Windows.AccountWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:svc="clr-namespace:TGManager.Services"
         Title="Контейнер"
-        Width="460" Height="560"
+        Width="460" Height="600"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -13,6 +14,17 @@
         <WindowChrome CaptionHeight="48" ResizeBorderThickness="0" GlassFrameThickness="0"
                       CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
     </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <svc:HexToBrush x:Key="HexToBrush"/>
+        <DataTemplate x:Key="ColorItem">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="14" Height="14" CornerRadius="3" VerticalAlignment="Center"
+                        Background="{Binding Converter={StaticResource HexToBrush}}"
+                        BorderBrush="{StaticResource HairlineStrongBrush}" BorderThickness="1"/>
+                <TextBlock Text="{Binding}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
     <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
             BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
         <Grid>
@@ -32,10 +44,11 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="22,8,22,8">
                     <TextBlock Text="НАЗВАНИЕ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
-                    <TextBox x:Name="NameBox" Style="{StaticResource FieldBox}" Margin="0,0,0,14"/>
+                    <TextBox x:Name="NameBox" Style="{StaticResource FieldBox}" Margin="0,0,0,14" MaxLength="64"/>
 
                     <TextBlock Text="ЦВЕТ КАРТОЧКИ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
-                    <ComboBox x:Name="ColorBox" Style="{StaticResource FieldCombo}" Margin="0,0,0,14" SelectionChanged="OnColorChanged"/>
+                    <ComboBox x:Name="ColorBox" Style="{StaticResource FieldCombo}" Margin="0,0,0,14"
+                              ItemTemplate="{StaticResource ColorItem}"/>
 
                     <TextBlock Text="ПРОКСИ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
                     <ComboBox x:Name="ProxyBox" Style="{StaticResource FieldCombo}" Margin="0,0,0,14" SelectionChanged="OnProxyChanged">
@@ -44,37 +57,40 @@
                         <ComboBoxItem Content="SOCKS5" Tag="socks5"/>
                     </ComboBox>
 
-                    <TextBlock Text="СТРОКОЙ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
-                    <TextBox x:Name="LineBox" Style="{StaticResource FieldBox}" Margin="0,0,0,4"/>
-                    <TextBlock x:Name="LineHint" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,14"/>
+                    <StackPanel x:Name="ProxyPanel">
+                        <TextBlock Text="СТРОКОЙ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
+                        <TextBox x:Name="LineBox" Style="{StaticResource FieldBox}" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="LineHint" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,14"
+                                   Text="host:port:логин:пароль, логин:пароль@host:port или socks5://…" TextWrapping="Wrap"/>
 
-                    <TextBlock Text="АДРЕС : ПОРТ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
-                    <Grid Margin="0,0,0,14" x:Name="HpRow">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="96"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="HostBox" Style="{StaticResource FieldBox}" Margin="0,0,8,0"/>
-                        <TextBox x:Name="PortBox" Grid.Column="1" Style="{StaticResource FieldBox}" Text="1080"/>
-                    </Grid>
+                        <TextBlock Text="АДРЕС : ПОРТ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,14" x:Name="HpRow">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="96"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="HostBox" Style="{StaticResource FieldBox}" Margin="0,0,8,0"/>
+                            <TextBox x:Name="PortBox" Grid.Column="1" Style="{StaticResource FieldBox}" Text="1080" MaxLength="5"/>
+                        </Grid>
 
-                    <TextBlock Text="АВТОРИЗАЦИЯ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
-                    <Grid x:Name="UpRow" Margin="0,0,0,14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="UserBox" Style="{StaticResource FieldBox}" Margin="0,0,8,0"/>
-                        <PasswordBox x:Name="PassBox" Grid.Column="1"/>
-                    </Grid>
+                        <TextBlock Text="АВТОРИЗАЦИЯ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
+                        <Grid x:Name="UpRow" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="UserBox" Style="{StaticResource FieldBox}" Margin="0,0,8,0"/>
+                            <PasswordBox x:Name="PassBox" Grid.Column="1"/>
+                        </Grid>
+                    </StackPanel>
 
                     <TextBlock Text="После создания нажмите «Папка» в строке контейнера и положите туда папку tdata от нужного аккаунта."
                                TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}"/>
                 </StackPanel>
             </ScrollViewer>
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="22,8,22,18">
-                <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnClose" Margin="0,0,8,0"/>
-                <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave"/>
+                <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnClose" Margin="0,0,8,0" IsCancel="True"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave" IsDefault="True"/>
             </StackPanel>
         </Grid>
     </Border>

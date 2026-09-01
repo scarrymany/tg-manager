@@ -16,6 +16,12 @@ public partial class SettingsWindow : Window
         _settings = settings;
         InitializeComponent();
         Chrome.Attach(this, WindowFrame);
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != System.Windows.Input.Key.Escape) return;
+            OnCancel(this, new RoutedEventArgs());
+            e.Handled = true;
+        };
         TgBox.Text = settings.TelegramBinary;
         PcBox.Text = settings.ProxychainsBinary;
         ManyChk.IsChecked = settings.AllowMany;
@@ -59,7 +65,7 @@ public partial class SettingsWindow : Window
             Title = "Выберите Telegram.exe",
             Filter = "Telegram (Telegram.exe)|Telegram.exe|Все файлы (*.*)|*.*",
         };
-        if (dlg.ShowDialog() == true)
+        if (dlg.ShowDialog(this) == true)
             TgBox.Text = dlg.FileName;
     }
 

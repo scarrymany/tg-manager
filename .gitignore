@@ -3,6 +3,9 @@
 /tools/
 /accounts/
 /config.json
+/config.broken-*.json
+/config.json.tmp
+/error.log
 
 # Python
 __pycache__/

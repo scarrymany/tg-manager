@@ -32,23 +32,27 @@ public sealed class AccountVm : INotifyPropertyChanged
 
     bool _running;
     bool _busy;
+    bool _stopping;
     bool _hasTdata;
 
     public bool Running { get => _running; set { if (_running == value) return; _running = value; Raise(nameof(Running)); RaiseState(); } }
     public bool Busy { get => _busy; set { if (_busy == value) return; _busy = value; Raise(nameof(Busy)); RaiseState(); } }
+    /// <summary>Идёт остановка Telegram (кнопки заблокированы, чтобы не нажать дважды).</summary>
+    public bool Stopping { get => _stopping; set { if (_stopping == value) return; _stopping = value; Raise(nameof(Stopping)); RaiseState(); } }
     public bool HasTdata { get => _hasTdata; set { if (_hasTdata == value) return; _hasTdata = value; Raise(nameof(HasTdata)); Raise(nameof(TdataLabel)); Raise(nameof(TdataBrush)); } }
 
-    public string StatusText => Busy ? "Чистка…" : Running ? "Запущен" : "Остановлен";
-    public Brush StatusFg => Busy ? (Brush)App.Current.FindResource("YellowBrush")
+    public string StatusText => Busy ? "Чистка…" : Stopping ? "Остановка…" : Running ? "Запущен" : "Остановлен";
+    public Brush StatusFg => Busy || Stopping ? (Brush)App.Current.FindResource("YellowBrush")
                            : Running ? (Brush)App.Current.FindResource("GreenBrush")
                            : (Brush)App.Current.FindResource("MutedBrush");
-    public Brush StatusBg => Running && !Busy
+    public Brush StatusBg => Running && !Busy && !Stopping
         ? (Brush)App.Current.FindResource("GreenBgBrush")
         : (Brush)App.Current.FindResource("HoverBrush");
 
-    public bool CanLaunch => !Running && !Busy;
-    public bool CanStop => Running && !Busy;
-    public bool CanCleanup => !Running;
+    public bool CanLaunch => !Running && !Busy && !Stopping;
+    public bool CanStop => Running && !Busy && !Stopping;
+    public bool CanCleanup => !Running && !Stopping;
+    public bool CanEdit => !Busy && !Stopping;
 
     public string TdataLabel => HasTdata ? "✓ tdata" : "✗ нет tdata";
     public Brush TdataBrush => HasTdata
@@ -68,11 +72,10 @@ public sealed class AccountVm : INotifyPropertyChanged
         RefreshMeta();
     }
 
+    /// <summary>Перечитывает наличие tdata. Уведомления идут только при реальном изменении.</summary>
     public void RefreshMeta()
     {
         HasTdata = Directory.Exists(Paths.AccountTdata(Id));
-        Raise(nameof(ProxySummary));
-        Raise(nameof(MetaLeft));
     }
 
     void RaiseState()
@@ -83,6 +86,7 @@ public sealed class AccountVm : INotifyPropertyChanged
         Raise(nameof(CanLaunch));
         Raise(nameof(CanStop));
         Raise(nameof(CanCleanup));
+        Raise(nameof(CanEdit));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

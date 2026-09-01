@@ -72,20 +72,19 @@ public static class Launcher
 
         if (account.Proxy.Type == ProxyKinds.Http)
             plan.HttpProxy = account.Proxy;
+        else
+            WriteProxychainsConf(account.Proxy, workdir);
 
-        WriteProxychainsConf(account, workdir);
         plan.Argv = [pc, "-f", Path.Combine(workdir, "proxychains.conf"), .. args];
         plan.ProxyApplied = true;
         return plan;
     }
 
-    public static void WriteProxychainsConf(Account account, string workdir, string? socksHost = null, int? socksPort = null)
+    public static void WriteProxychainsConf(ProxyCfg proxy, string workdir, string? socksHost = null, int? socksPort = null)
     {
-        string line;
-        if (socksHost is not null && socksPort is not null)
-            line = $"socks5 {socksHost} {socksPort}";
-        else
-            line = account.Proxy.ProxychainsLine();
+        var line = socksHost is not null && socksPort is not null
+            ? $"socks5 {socksHost} {socksPort}"
+            : proxy.ProxychainsLine();
         var body =
             "# Автогенерация TG Manager — не редактируйте вручную\n" +
             "strict_chain\nproxy_dns\nquiet_mode\nremote_dns_subnet 224\n" +
@@ -101,7 +100,7 @@ public static class Launcher
         {
             var port = HttpBridge.Start(plan.Workdir, http);
             if (port is null) return null;
-            WriteProxychainsConf(new Account { Proxy = http }, plan.Workdir, "127.0.0.1", port);
+            WriteProxychainsConf(http, plan.Workdir, "127.0.0.1", port);
         }
 
         var file = plan.Argv[0];
@@ -117,12 +116,17 @@ public static class Launcher
         try
         {
             var p = Process.Start(psi);
-            if (p is null) return null;
+            if (p is null)
+            {
+                HttpBridge.Stop(plan.Workdir);
+                return null;
+            }
             ProcessUtil.WritePid(plan.Workdir, p.Id);
             return p.Id;
         }
         catch
         {
+            HttpBridge.Stop(plan.Workdir);
             return null;
         }
     }
@@ -134,4 +138,6 @@ public static class Launcher
     }
 
     public static bool IsRunning(string workdir) => ProcessUtil.IsRunning(workdir);
+
+    public static bool IsRunning(string workdir, ProcessScan scan) => ProcessUtil.IsRunning(workdir, scan);
 }

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using TGManager.Services;
 
 namespace TGManager.Windows;
@@ -24,7 +25,7 @@ public partial class AccountWindow : Window
         NameBox.Text = _account.Name;
         foreach (var c in CardColors.All)
             ColorBox.Items.Add(c);
-        var ci = Array.IndexOf(CardColors.All, _account.Color);
+        var ci = Array.FindIndex(CardColors.All, c => string.Equals(c, _account.Color, StringComparison.OrdinalIgnoreCase));
         ColorBox.SelectedIndex = ci >= 0 ? ci : 0;
         var ptype = _account.Proxy.Type switch
         {
@@ -38,30 +39,24 @@ public partial class AccountWindow : Window
         UserBox.Text = _account.Proxy.Username;
         PassBox.Password = _account.Proxy.Password;
         LineBox.TextChanged += OnLineChanged;
-        ToggleProxy();
-        PaintColor();
+        ToggleProxy(animate: false);
+        Loaded += (_, _) => { NameBox.Focus(); NameBox.SelectAll(); };
     }
 
-    void OnColorChanged(object sender, SelectionChangedEventArgs e) => PaintColor();
+    void OnProxyChanged(object sender, SelectionChangedEventArgs e) => ToggleProxy(animate: IsLoaded);
 
-    void PaintColor()
-    {
-        if (ColorBox.SelectedItem is string hex)
-        {
-            try { ColorBox.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)!); }
-            catch { /* ignore */ }
-        }
-    }
-
-    void OnProxyChanged(object sender, SelectionChangedEventArgs e) => ToggleProxy();
-
-    void ToggleProxy()
+    void ToggleProxy(bool animate)
     {
         var on = ProxyTag() != ProxyKinds.None;
-        HpRow.IsEnabled = on;
-        UpRow.IsEnabled = on;
-        HpRow.Opacity = on ? 1 : 0.45;
-        UpRow.Opacity = on ? 1 : 0.45;
+        ProxyPanel.IsEnabled = on;
+        var target = on ? 1.0 : 0.45;
+        if (!animate)
+        {
+            ProxyPanel.Opacity = target;
+            return;
+        }
+        ProxyPanel.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(target, new Duration(TimeSpan.FromMilliseconds(150))));
     }
 
     string ProxyTag()
@@ -73,7 +68,8 @@ public partial class AccountWindow : Window
         var text = LineBox.Text.Trim();
         if (text.Length == 0)
         {
-            LineHint.Text = "";
+            LineHint.Text = "host:port:логин:пароль, логин:пароль@host:port или socks5://…";
+            LineHint.Foreground = (Brush)FindResource("SubtleBrush");
             return;
         }
         var parsed = ProxyParse.Parse(text);
@@ -84,13 +80,15 @@ public partial class AccountWindow : Window
             return;
         }
         _applyingLine = true;
-        if (ProxyTag() == ProxyKinds.None)
-            ProxyBox.SelectedIndex = 2;
-        HostBox.Text = parsed.Value.Host;
-        PortBox.Text = parsed.Value.Port.ToString();
-        UserBox.Text = parsed.Value.User;
-        PassBox.Password = parsed.Value.Pass;
-        LineHint.Text = "✓ Распознано и подставлено ниже";
+        var p = parsed.Value;
+        if (p.Scheme == ProxyKinds.Http) ProxyBox.SelectedIndex = 1;
+        else if (p.Scheme == ProxyKinds.Socks5) ProxyBox.SelectedIndex = 2;
+        else if (ProxyTag() == ProxyKinds.None) ProxyBox.SelectedIndex = 2;
+        HostBox.Text = p.Host;
+        PortBox.Text = p.Port.ToString();
+        UserBox.Text = p.User;
+        PassBox.Password = p.Pass;
+        LineHint.Text = "✓ Распознано и подставлено ниже" + (p.Scheme is null ? "" : $" ({(p.Scheme == ProxyKinds.Http ? "HTTP" : "SOCKS5")})");
         LineHint.Foreground = (Brush)FindResource("GreenBrush");
         _applyingLine = false;
     }
@@ -101,26 +99,40 @@ public partial class AccountWindow : Window
         if (name.Length == 0)
         {
             ConfirmWindow.Info(this, "Проверьте данные", "Введите название контейнера.");
+            NameBox.Focus();
             return;
         }
         var ptype = ProxyTag();
-        if (ptype != ProxyKinds.None && string.IsNullOrWhiteSpace(HostBox.Text))
+        var host = HostBox.Text.Trim();
+        var port = 0;
+        if (ptype != ProxyKinds.None)
         {
-            ConfirmWindow.Info(this, "Проверьте данные", "Укажите адрес прокси или выберите «Без прокси».");
-            return;
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                ConfirmWindow.Info(this, "Проверьте данные", "Укажите адрес прокси или выберите «Без прокси».");
+                HostBox.Focus();
+                return;
+            }
+            if (!int.TryParse(PortBox.Text.Trim(), out port) || port is < 1 or > 65535)
+            {
+                ConfirmWindow.Info(this, "Проверьте данные", "Порт прокси должен быть числом от 1 до 65535.");
+                PortBox.Focus();
+                PortBox.SelectAll();
+                return;
+            }
         }
-        if (!int.TryParse(PortBox.Text.Trim(), out var port) || port is < 1 or > 65535)
-            port = 1080;
         _account.Name = name;
         _account.Color = ColorBox.SelectedItem as string ?? "#FFFFFF";
-        _account.Proxy = new ProxyCfg
-        {
-            Type = ptype,
-            Host = HostBox.Text.Trim(),
-            Port = port,
-            Username = UserBox.Text.Trim(),
-            Password = PassBox.Password,
-        };
+        _account.Proxy = ptype == ProxyKinds.None
+            ? new ProxyCfg()
+            : new ProxyCfg
+            {
+                Type = ptype,
+                Host = host,
+                Port = port,
+                Username = UserBox.Text.Trim(),
+                Password = PassBox.Password,
+            };
         Result = _account;
         DialogResult = true;
         Close();

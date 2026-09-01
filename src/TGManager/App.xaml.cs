@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Interop;
 using TGManager.Native;
@@ -16,6 +17,15 @@ public partial class App : System.Windows.Application
     uint _showMessage;
     MainWindow? _window;
     int _excDialog;
+
+    public static string VersionString
+    {
+        get
+        {
+            var v = typeof(App).Assembly.GetName().Version;
+            return v is null ? "1.2.0" : $"{v.Major}.{v.Minor}.{v.Build}";
+        }
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -41,18 +51,21 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException += (_, args) =>
         {
             args.Handled = true;
+            LogError(args.Exception);
             var msg = args.Exception?.Message ?? "";
+            // Шум привязок (TwoWay на read-only и т.п.) — только в лог, без окна.
             if (msg.Contains("привязк", StringComparison.OrdinalIgnoreCase)
                 || msg.Contains("Binding", StringComparison.OrdinalIgnoreCase)
                 || msg.Contains("TwoWay", StringComparison.OrdinalIgnoreCase)
                 || msg.Contains("OneWayToSource", StringComparison.OrdinalIgnoreCase))
                 return;
+            // Один диалог за раз: повторные исключения не должны плодить окна.
             if (Interlocked.Exchange(ref _excDialog, 1) == 1)
                 return;
             try
             {
                 System.Windows.MessageBox.Show(
-                    msg,
+                    msg + "\n\nПодробности записаны в error.log рядом с программой.",
                     "TG Manager",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -62,13 +75,15 @@ public partial class App : System.Windows.Application
                 Interlocked.Exchange(ref _excDialog, 0);
             }
         };
-
-        try
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
-            System.Windows.Forms.Application.EnableVisualStyles();
-            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
-        }
-        catch { /* optional */ }
+            if (args.ExceptionObject is Exception ex) LogError(ex);
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogError(args.Exception);
+            args.SetObserved();
+        };
 
         try
         {
@@ -83,12 +98,29 @@ public partial class App : System.Windows.Application
                 src?.AddHook(SingleInstanceHook);
             };
             _window.Show();
+            if (store.RecoveredBackup is { } backup)
+            {
+                ConfirmWindow.Info(_window, "Конфиг не прочитался",
+                    "config.json повреждён и был заменён пустым. Старый файл сохранён:\n" + backup +
+                    "\n\nПапки контейнеров в accounts\\ не тронуты.");
+            }
         }
         catch (Exception ex)
         {
+            LogError(ex);
             System.Windows.MessageBox.Show(ex.ToString(), "TG Manager", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         }
+    }
+
+    static void LogError(Exception ex)
+    {
+        try
+        {
+            var path = Path.Combine(Paths.AppRoot, "error.log");
+            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");
+        }
+        catch { /* ignore */ }
     }
 
     IntPtr SingleInstanceHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -103,6 +135,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        HttpBridge.StopAll();
         if (_mutex is not null)
         {
             try { _mutex.ReleaseMutex(); } catch { /* already released */ }

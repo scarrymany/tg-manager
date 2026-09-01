@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TGManager.Services;
 
 namespace TGManager.Windows;
@@ -14,13 +15,21 @@ public partial class ConfirmWindow : Window
     {
         InitializeComponent();
         Chrome.Attach(this, WindowFrame);
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            ResultChoice = Choice.Cancel;
+            DialogResult = false;
+            Close();
+            e.Handled = true;
+        };
     }
 
     public static bool Ask(Window? owner, string title, string text, string yes = "Да", string no = "Отмена")
     {
         var w = Build(owner, title, text);
-        w.AddGhost(no, Choice.Cancel);
-        w.AddPrimary(yes, Choice.Accept);
+        w.AddGhost(no, Choice.Cancel, isCancel: true);
+        w.AddPrimary(yes, Choice.Accept, isDefault: true);
         w.ShowDialog();
         return w.ResultChoice == Choice.Accept;
     }
@@ -28,14 +37,14 @@ public partial class ConfirmWindow : Window
     public static void Info(Window? owner, string title, string text)
     {
         var w = Build(owner, title, text);
-        w.AddPrimary("ОК", Choice.Accept);
+        w.AddPrimary("ОК", Choice.Accept, isDefault: true);
         w.ShowDialog();
     }
 
     public static Choice AskDelete(Window? owner, string title, string text)
     {
         var w = Build(owner, title, text);
-        w.AddGhost("Отмена", Choice.Cancel);
+        w.AddGhost("Отмена", Choice.Cancel, isCancel: true);
         w.AddGhost("Удалить, папку оставить", Choice.Accept);
         w.AddDanger("Удалить с данными", Choice.Destructive);
         w.ShowDialog();
@@ -52,11 +61,14 @@ public partial class ConfirmWindow : Window
         return w;
     }
 
-    void AddGhost(string label, Choice choice) => Add(label, (Style)FindResource("GhostButton"), choice);
-    void AddPrimary(string label, Choice choice) => Add(label, (Style)FindResource("PrimaryButton"), choice);
-    void AddDanger(string label, Choice choice) => Add(label, (Style)FindResource("DangerButton"), choice);
+    void AddGhost(string label, Choice choice, bool isCancel = false)
+        => Add(label, (Style)FindResource("GhostButton"), choice, isDefault: false, isCancel);
+    void AddPrimary(string label, Choice choice, bool isDefault = false)
+        => Add(label, (Style)FindResource("PrimaryButton"), choice, isDefault, isCancel: false);
+    void AddDanger(string label, Choice choice)
+        => Add(label, (Style)FindResource("DangerButton"), choice, isDefault: false, isCancel: false);
 
-    void Add(string label, Style style, Choice choice)
+    void Add(string label, Style style, Choice choice, bool isDefault, bool isCancel)
     {
         var b = new Button
         {
@@ -65,6 +77,8 @@ public partial class ConfirmWindow : Window
             Margin = new Thickness(8, 0, 0, 0),
             MinWidth = 88,
             Padding = new Thickness(14, 8, 14, 8),
+            IsDefault = isDefault,
+            IsCancel = isCancel,
         };
         b.Click += (_, _) =>
         {
@@ -73,5 +87,7 @@ public partial class ConfirmWindow : Window
             Close();
         };
         Buttons.Children.Add(b);
+        if (isDefault)
+            Loaded += (_, _) => b.Focus();
     }
 }

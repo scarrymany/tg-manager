@@ -1,15 +1,41 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using TGManager.Native;
 
 namespace TGManager.Services;
+
+/// <summary>
+/// Снимок процессов системы: список pid/parent/name и ленивое чтение командных строк.
+/// Один снимок на опрос всех контейнеров — иначе UI подвисает при десятках карточек.
+/// </summary>
+public sealed class ProcessScan
+{
+    internal readonly List<ProcessUtil.Snap> Rows;
+    readonly Dictionary<int, string?> _cmdCache = new();
+
+    internal ProcessScan(List<ProcessUtil.Snap> rows) => Rows = rows;
+
+    public static ProcessScan Take() => new(ProcessUtil.Snapshot());
+
+    internal string? CommandLine(int pid)
+    {
+        if (_cmdCache.TryGetValue(pid, out var cached)) return cached;
+        var cmd = ProcessUtil.GetCommandLine(pid);
+        _cmdCache[pid] = cmd;
+        return cmd;
+    }
+}
 
 public static class ProcessUtil
 {
     public const string PidFile = "telegram.pid";
     public const string BridgePidFile = "http_bridge.pid";
+
+    // Только эти процессы считаем «нашими» по имени. Раньше искали подстроку «telegram»
+    // в имени+командной строке — из-за этого Стоп мог убить explorer.exe / cmd.exe,
+    // открытые в папке контейнера, если путь программы содержал слово telegram.
+    static readonly string[] TargetNames = ["telegram", "proxychains"];
 
     public static void WritePid(string workdir, int pid, string name = PidFile)
     {
@@ -34,13 +60,18 @@ public static class ProcessUtil
 
     public static bool IsRunning(string workdir) => PidsForWorkdir(workdir).Count > 0;
 
-    public static List<int> PidsForWorkdir(string workdir)
+    public static bool IsRunning(string workdir, ProcessScan scan) => PidsForWorkdir(workdir, scan).Count > 0;
+
+    public static List<int> PidsForWorkdir(string workdir) => PidsForWorkdir(workdir, ProcessScan.Take());
+
+    public static List<int> PidsForWorkdir(string workdir, ProcessScan scan)
     {
         var found = new List<int>();
         var seen = new HashSet<int>();
         var marker = Path.GetFullPath(workdir).ToLowerInvariant().TrimEnd('\\', '/');
+        var markerFwd = marker.Replace('\\', '/');
         var my = Environment.ProcessId;
-        var snap = Snapshot();
+        var rows = scan.Rows;
 
         void Add(int pid)
         {
@@ -50,8 +81,9 @@ public static class ProcessUtil
 
         void AddTree(int pid)
         {
+            if (pid <= 0 || seen.Contains(pid)) return; // защита от циклов при переиспользовании pid
             Add(pid);
-            foreach (var c in snap.Where(x => x.Parent == pid).Select(x => x.Pid))
+            foreach (var c in rows.Where(x => x.Parent == pid && x.Pid != pid).Select(x => x.Pid))
                 AddTree(c);
         }
 
@@ -60,18 +92,14 @@ public static class ProcessUtil
         var br = ReadPid(workdir, BridgePidFile);
         if (br > 0) AddTree(br);
 
-        foreach (var row in snap)
+        foreach (var row in rows)
         {
-            if (row.Pid == my) continue;
+            if (row.Pid == my || seen.Contains(row.Pid)) continue;
             var name = row.Name.ToLowerInvariant();
-            var cmd = (GetCommandLine(row.Pid) ?? "").ToLowerInvariant();
-            var blob = name + " " + cmd;
-            var isTarget = blob.Contains("telegram") || blob.Contains("proxychains")
-                           || blob.Contains("--tg-http-bridge");
-            if (!isTarget) continue;
-            if (blob.Contains("--tg-worker")) continue;
-            var norm = blob.Replace('/', '\\');
-            if (norm.Contains(marker) || blob.Contains(marker.Replace('\\', '/')))
+            if (!TargetNames.Any(name.Contains)) continue;
+            var cmd = (scan.CommandLine(row.Pid) ?? "").ToLowerInvariant();
+            if (cmd.Length == 0) continue;
+            if (cmd.Contains(marker) || cmd.Contains(markerFwd))
                 AddTree(row.Pid);
         }
         return found;
@@ -98,7 +126,8 @@ public static class ProcessUtil
 
     public static bool KillTree(int pid)
     {
-        var ok = NativeMethods.KillPid(pid);
+        // Сначала taskkill /T — пока родитель жив, дерево ещё можно обойти.
+        var ok = false;
         try
         {
             using var p = Process.Start(new ProcessStartInfo
@@ -110,18 +139,21 @@ public static class ProcessUtil
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             });
-            p?.WaitForExit(6000);
-            ok = true;
+            if (p is not null)
+            {
+                p.WaitForExit(6000);
+                ok = p.HasExited && p.ExitCode == 0;
+            }
         }
         catch { /* ignore */ }
         if (NativeMethods.IsAlive(pid))
             ok = NativeMethods.KillPid(pid) || ok;
-        return ok;
+        return ok || !NativeMethods.IsAlive(pid);
     }
 
-    record Snap(int Pid, int Parent, string Name);
+    internal record Snap(int Pid, int Parent, string Name);
 
-    static List<Snap> Snapshot()
+    internal static List<Snap> Snapshot()
     {
         var list = new List<Snap>();
         var snap = CreateToolhelp32Snapshot(2, 0); // TH32CS_SNAPPROCESS
@@ -139,18 +171,18 @@ public static class ProcessUtil
         return list;
     }
 
-    static string? GetCommandLine(int pid)
+    internal static string? GetCommandLine(int pid)
     {
         var h = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
         if (h == IntPtr.Zero) return null;
         try
         {
-            var status = NtQueryInformationProcess(h, 70, IntPtr.Zero, 0, out var len);
+            NtQueryInformationProcess(h, 70, IntPtr.Zero, 0, out var len);
             if (len <= 0 || len > 1_000_000) return null;
             var buf = Marshal.AllocHGlobal(len);
             try
             {
-                status = NtQueryInformationProcess(h, 70, buf, len, out len);
+                var status = NtQueryInformationProcess(h, 70, buf, len, out len);
                 if (status != 0) return null;
                 var us = Marshal.PtrToStructure<UNICODE_STRING>(buf);
                 if (us.Buffer == IntPtr.Zero || us.Length == 0) return null;

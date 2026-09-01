@@ -94,8 +94,8 @@
                 </StackPanel>
             </ScrollViewer>
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,8,20,16">
-                <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnCancel" Margin="0,0,8,0"/>
-                <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave"/>
+                <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnCancel" Margin="0,0,8,0" IsCancel="True"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave" IsDefault="True"/>
             </StackPanel>
         </Grid>
     </Border>

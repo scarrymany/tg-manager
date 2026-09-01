@@ -16,6 +16,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     readonly Store _store;
     readonly DispatcherTimer _poll;
     readonly Dictionary<string, TaskVm> _tasks = [];
+    readonly Dictionary<string, TaskLogWindow> _logWindows = [];
+    bool _polling;
+    bool _closing;
 
     public ObservableCollection<AccountVm> Accounts { get; } = [];
     public ObservableCollection<TaskVm> Tasks { get; } = [];
@@ -33,11 +36,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Chrome.Attach(this, WindowFrame);
         AccountList.ItemsSource = Accounts;
         TaskList.ItemsSource = Tasks;
+        VersionText.Text = "v" + App.VersionString;
+        StateChanged += (_, _) => SyncMaxIcon();
         ReloadAccounts();
         _poll = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _poll.Tick += (_, _) => PollStatus();
         _poll.Start();
-        Status("TG Manager 1.1.0");
+        Status("Готово");
     }
 
     void ReloadAccounts()
@@ -51,30 +56,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     AccountVm? Find(string id) => Accounts.FirstOrDefault(a => a.Id == id);
 
-    void PollStatus()
+    /// <summary>
+    /// Опрос состояния контейнеров. Снимок процессов и чтение командных строк — в фоне,
+    /// иначе при десятках карточек UI подвисает каждые 2 секунды.
+    /// </summary>
+    async void PollStatus()
     {
-        foreach (var vm in Accounts)
+        if (_polling || _closing) return;
+        _polling = true;
+        try
         {
-            var workdir = Paths.AccountWorkdir(vm.Id);
-            var busy = WorkerHost.IsLocked(workdir) || (_tasks.TryGetValue(vm.Id, out var t) && t.IsRunning);
-            vm.Busy = busy;
-            vm.Running = !busy && Launcher.IsRunning(workdir);
-            vm.RefreshMeta();
+            var ids = Accounts.Select(a => a.Id).ToList();
+            var result = await Task.Run(() =>
+            {
+                var scan = ProcessScan.Take();
+                var dict = new Dictionary<string, (bool Locked, bool Running)>(ids.Count);
+                foreach (var id in ids)
+                {
+                    var wd = Paths.AccountWorkdir(id);
+                    dict[id] = (WorkerHost.IsLocked(wd), Launcher.IsRunning(wd, scan));
+                }
+                return dict;
+            });
+            foreach (var vm in Accounts)
+            {
+                if (!result.TryGetValue(vm.Id, out var st)) continue;
+                var busy = st.Locked || (_tasks.TryGetValue(vm.Id, out var t) && t.IsRunning);
+                vm.Busy = busy;
+                if (!vm.Stopping) vm.Running = !busy && st.Running;
+                vm.RefreshMeta();
+            }
         }
+        catch { /* опрос не должен ронять окно */ }
+        finally { _polling = false; }
     }
 
     void OnNavContainers(object sender, RoutedEventArgs e)
     {
-        ContainersPage.Visibility = Visibility.Visible;
-        TasksPage.Visibility = Visibility.Collapsed;
+        if (ContainersPage.Visibility == Visibility.Visible) return;
+        Chrome.CrossFade(ContainersPage, TasksPage);
         NavContainers.Tag = "active";
         NavTasks.Tag = null;
     }
 
     void OnNavTasks(object sender, RoutedEventArgs e)
     {
-        ContainersPage.Visibility = Visibility.Collapsed;
-        TasksPage.Visibility = Visibility.Visible;
+        if (TasksPage.Visibility == Visibility.Visible) return;
+        Chrome.CrossFade(TasksPage, ContainersPage);
         NavContainers.Tag = null;
         NavTasks.Tag = "active";
     }
@@ -86,24 +114,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         HasTasks = Tasks.Count > 0;
     }
 
-    async void OnAddAccount(object sender, RoutedEventArgs e)
+    void OnAddAccount(object sender, RoutedEventArgs e)
     {
         var dlg = new AccountWindow { Owner = this };
         if (dlg.ShowDialog() != true || dlg.Result is null) return;
         var account = dlg.Result;
         Directory.CreateDirectory(Paths.AccountWorkdir(account.Id));
+        _store.Add(account);
+        Accounts.Add(new AccountVm(account));
+        HasAccounts = true;
+
         var prep = new DownloadWindow("Подготовка контейнера",
             $"«{account.Name}» — создаю папку и проверяю переносной Telegram.",
             DownloadKind.PrepareTelegram)
         { Owner = this };
         prep.ShowDialog();
-        _store.Add(account);
-        ReloadAccounts();
         Status(prep.Succeeded
             ? "Контейнер создан и подготовлен"
             : "Контейнер создан (переносной Telegram можно докачать позже)");
         OpenFolder(account.Id);
-        await Task.CompletedTask;
+        PollStatus();
     }
 
     void OnEdit(object sender, RoutedEventArgs e)
@@ -118,24 +148,49 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Status("Контейнер обновлён");
     }
 
-    void OnDelete(object sender, RoutedEventArgs e)
+    async void OnDelete(object sender, RoutedEventArgs e)
     {
         if (IdOf(sender) is not { } id) return;
         var acc = _store.Get(id);
         if (acc is null) return;
+        var vm = Find(id);
         var workdir = Paths.AccountWorkdir(id);
-        var running = Launcher.IsRunning(workdir);
+        var running = vm?.Running == true || Launcher.IsRunning(workdir);
+        var taskRunning = _tasks.TryGetValue(id, out var task) && task.IsRunning;
         var info = (running ? "Контейнер будет остановлен.\n" : "") +
+                   (taskRunning ? "Идущая чистка будет прервана.\n" : "") +
                    "Также удалить папку с данными (tdata)?\n«Нет» — оставить папку на диске.";
         var choice = ConfirmWindow.AskDelete(this, $"Удалить «{acc.Name}»?", info);
         if (choice == ConfirmWindow.Choice.Cancel) return;
-        if (running) Launcher.Stop(workdir);
+
+        if (vm is not null) vm.Stopping = true;
+        if (task is not null)
+        {
+            task.Stop();
+            Tasks.Remove(task);
+            _tasks.Remove(id);
+            CloseLogWindow(id);
+            RefreshTasksNav();
+        }
+        if (running)
+        {
+            Status("Останавливаю Telegram…");
+            await Task.Run(() => Launcher.Stop(workdir));
+        }
         if (choice == ConfirmWindow.Choice.Destructive)
         {
-            try { Directory.Delete(workdir, true); } catch { /* ignore */ }
+            var err = await Task.Run(() =>
+            {
+                try { Directory.Delete(workdir, true); return (string?)null; }
+                catch (Exception ex) { return ex.Message; }
+            });
+            if (err is not null)
+                ConfirmWindow.Info(this, "Папка не удалена полностью",
+                    "Часть файлов занята другим процессом:\n" + err + "\n\nУдалите папку вручную:\n" + workdir);
         }
         _store.Remove(id);
-        ReloadAccounts();
+        if (vm is not null) Accounts.Remove(vm);
+        HasAccounts = Accounts.Count > 0;
         Status("Контейнер удалён");
     }
 
@@ -167,6 +222,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         if (Launcher.IsRunning(workdir))
         {
+            if (Find(id) is { } already) already.Running = true;
             Status("Контейнер уже запущен");
             return;
         }
@@ -228,8 +284,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ConfirmWindow.Info(this, "Ошибка", "Не удалось запустить процесс.");
             return;
         }
-        Find(id)?.RefreshMeta();
-        if (Find(id) is { } vm) vm.Running = true;
+        if (Find(id) is { } vm)
+        {
+            vm.RefreshMeta();
+            vm.Running = true;
+        }
         Status("Запущен: " + acc.Name + (plan.ProxyApplied ? " (с прокси)" : ""));
     }
 
@@ -238,15 +297,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (IdOf(sender) is not { } id) return;
         var acc = _store.Get(id);
         var workdir = Paths.AccountWorkdir(id);
-        Launcher.Stop(workdir);
-        for (var attempt = 0; attempt < 8; attempt++)
+        var vm = Find(id);
+        if (vm is { Stopping: true }) return;
+        if (vm is not null) vm.Stopping = true;
+        Status("Останавливаю" + (acc is null ? "…" : ": " + acc.Name + "…"));
+
+        // Terminate + taskkill + ожидание — всё в фоне, UI не замирает.
+        var alive = await Task.Run(() =>
         {
-            if (!Launcher.IsRunning(workdir)) break;
-            if (attempt is 2 or 5) Launcher.Stop(workdir);
-            await Task.Delay(200);
+            Launcher.Stop(workdir);
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                if (!Launcher.IsRunning(workdir)) return false;
+                if (attempt is 3 or 6) Launcher.Stop(workdir);
+                Thread.Sleep(200);
+            }
+            return Launcher.IsRunning(workdir);
+        });
+
+        if (vm is not null)
+        {
+            vm.Stopping = false;
+            vm.Running = alive;
         }
-        var alive = Launcher.IsRunning(workdir);
-        if (Find(id) is { } vm) vm.Running = alive;
         Status(alive
             ? "Telegram не завершился. Закройте его из трея: Quit Telegram."
             : acc is null ? "Остановлен" : "Остановлен: " + acc.Name);
@@ -289,13 +362,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     void StartTask(Account acc, IReadOnlyList<string> actions, bool revoke)
     {
-        if (_tasks.TryGetValue(acc.Id, out var old) && old.Finished)
+        if (_tasks.TryGetValue(acc.Id, out var old))
         {
+            if (!old.Finished) return;
             Tasks.Remove(old);
             _tasks.Remove(acc.Id);
+            CloseLogWindow(acc.Id);
         }
         var vm = new TaskVm(acc, actions, revoke);
-        vm.PropertyChanged += (_, _) => RefreshTasksNav();
+        vm.PropertyChanged += (_, a) =>
+        {
+            if (a.PropertyName is nameof(TaskVm.State)) RefreshTasksNav();
+        };
         if (!vm.Start())
         {
             ConfirmWindow.Info(this, "Не удалось запустить", "Воркер чистки не стартовал.");
@@ -304,6 +382,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         _tasks[acc.Id] = vm;
         Tasks.Insert(0, vm);
+        if (Find(acc.Id) is { } avm) avm.Busy = true;
         RefreshTasksNav();
         OnNavTasks(this, new RoutedEventArgs());
     }
@@ -312,7 +391,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (IdOf(sender) is not { } id) return;
         if (!_tasks.TryGetValue(id, out var t)) return;
-        new TaskLogWindow(t) { Owner = this }.ShowDialog();
+        if (_logWindows.TryGetValue(id, out var open))
+        {
+            Chrome.ActivateExisting(open);
+            return;
+        }
+        var w = new TaskLogWindow(t) { Owner = this };
+        _logWindows[id] = w;
+        w.Closed += (_, _) => _logWindows.Remove(id);
+        w.Show();
+    }
+
+    void CloseLogWindow(string id)
+    {
+        if (_logWindows.TryGetValue(id, out var w))
+        {
+            try { w.Close(); } catch { /* ignore */ }
+            _logWindows.Remove(id);
+        }
     }
 
     void OnTaskAction(object sender, RoutedEventArgs e)
@@ -324,6 +420,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Tasks.Remove(t);
             _tasks.Remove(id);
+            CloseLogWindow(id);
         }
         RefreshTasksNav();
         PollStatus();
@@ -335,13 +432,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Tasks.Remove(t);
             _tasks.Remove(t.Id);
+            CloseLogWindow(t.Id);
         }
         RefreshTasksNav();
     }
 
     void OnStopAll(object sender, RoutedEventArgs e)
     {
-        foreach (var t in Tasks.Where(x => x.IsRunning).ToList())
+        var running = Tasks.Where(x => x.IsRunning).ToList();
+        if (running.Count == 0) return;
+        if (!ConfirmWindow.Ask(this, "Остановить все",
+                $"Прервать задач: {running.Count}?", yes: "Остановить"))
+            return;
+        foreach (var t in running)
             t.Stop();
         RefreshTasksNav();
         PollStatus();
@@ -357,15 +460,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    void OnMinimize(object sender, RoutedEventArgs e) => Chrome.Minimize(this);
-    void OnMaximize(object sender, RoutedEventArgs e)
+    public const string RepoUrl = "https://github.com/scarrymany/tg-manager";
+    public const string DeveloperTelegram = "https://t.me/yeet17";
+
+    void OnGitHub(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl);
+    void OnTelegram(object sender, RoutedEventArgs e) => OpenUrl(DeveloperTelegram);
+
+    void OpenUrl(string url)
     {
-        Chrome.ToggleMax(this);
-        MaxIcon.Data = System.Windows.Media.Geometry.Parse(
-            WindowState == WindowState.Maximized
-                ? "M8,8 H16 V16 H8 Z M5,11 V5 H15"
-                : "M5,5 H15 V15 H5 Z");
+        try { Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true }); }
+        catch { Status("Не удалось открыть ссылку: " + url); }
     }
+
+    void OnMinimize(object sender, RoutedEventArgs e) => Chrome.Minimize(this);
+    void OnMaximize(object sender, RoutedEventArgs e) => Chrome.ToggleMax(this);
+
+    void SyncMaxIcon()
+    {
+        var max = WindowState == WindowState.Maximized;
+        MaxIcon.Data = System.Windows.Media.Geometry.Parse(max
+            ? "M8,8 H16 V16 H8 Z M5,11 V5 H15"
+            : "M5,5 H15 V15 H5 Z");
+        MaxButton.ToolTip = max ? "Восстановить" : "Развернуть";
+    }
+
     void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
     void OnClosing(object sender, CancelEventArgs e)
@@ -379,8 +497,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 e.Cancel = true;
                 return;
             }
-            foreach (var t in Tasks.Where(x => x.IsRunning).ToList())
-                t.Stop();
+        }
+        if (HttpBridge.AnyLive)
+        {
+            if (!ConfirmWindow.Ask(this, "HTTP-прокси через TG Manager",
+                    "Контейнеры с HTTP-прокси ходят через мост внутри TG Manager.\n" +
+                    "После закрытия программы их Telegram потеряет соединение через прокси\n(SOCKS5-контейнеров это не касается).\n\nВсё равно закрыть?",
+                    yes: "Закрыть"))
+            {
+                e.Cancel = true;
+                return;
+            }
+        }
+        _closing = true;
+        foreach (var t in Tasks.Where(x => x.IsRunning).ToList())
+            t.Stop();
+        foreach (var w in _logWindows.Values.ToList())
+        {
+            try { w.Close(); } catch { /* ignore */ }
         }
         _poll.Stop();
     }

@@ -1,131 +1,126 @@
-# TG Manager — Windows 10/11
+<div align="center">
 
-Портативный менеджер Telegram-контейнеров. Семья **SCARP.CC**: графит/белый,
-одна карточка = один аккаунт (`tdata`), запуск многих окон сразу, HTTP/SOCKS5
-на контейнер, чистка аккаунта через Telethon.
+<img src="assets/icon_128.png" width="96" alt="TG Manager">
 
-Linux-версия живёт на ветке [`main`](https://github.com/scarrymany/tg-manager/tree/main).
-Эта ветка (`windows`) — полноценный порт под Windows 10/11.
+# TG Manager
 
-Интерфейс — **WPF / .NET 9** (тот же стек, что [Клип](https://github.com/scarrymany/klip)):
-нативное окно, PerMonitorV2, без Qt. Чистка tdata — отдельный `TGWorker.exe`.
+**Много Telegram-аккаунтов на одном Windows. Каждый — в своём контейнере, со своим прокси.**
 
-![icon](assets/icon_256.png)
+[![Release](https://img.shields.io/github/v/release/scarrymany/tg-manager?filter=*-windows&label=release&color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/scarrymany/tg-manager/total?color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases)
+[![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-white?labelColor=0a0a0a)](#требования)
+[![.NET 9 · WPF](https://img.shields.io/badge/.NET%209-WPF-white?labelColor=0a0a0a)](src/TGManager)
+[![Portable](https://img.shields.io/badge/portable-без%20установки-white?labelColor=0a0a0a)](#скачать)
 
-## Скачать и запустить (без Python / SDK)
+<br>
 
-Релиз: [Releases](https://github.com/scarrymany/tg-manager/releases/tag/v1.1.0-windows)
+<img src="docs/screens/main.png" width="900" alt="TG Manager — список контейнеров">
 
-1. Скачайте `TG-Manager-1.1.0-windows.zip`.
-2. Распакуйте в любую папку (программа **не пишет в AppData** — всё рядом с exe).
-3. Запустите `TGManager.exe`. `TGWorker.exe` должен лежать рядом.
+</div>
 
-```
-TG-Manager\
-  TGManager.exe          ← запуск (WPF)
-  TGWorker.exe           ← чистка tdata (без окна)
-  README.txt
-  telegram\              ← появится после «Скачать переносной Telegram»
-  accounts\<id>\tdata\   ← сюда кладёте tdata
-  config.json
-  tools\proxychains\     ← появится, если пользуетесь прокси
-```
+<br>
 
-Переносить папку целиком на другой диск / ПК можно в любой момент.
+Один контейнер — одна папка `tdata`, своё имя, свой HTTP/SOCKS5-прокси. Запуск многих
+окон Telegram Desktop одновременно, живой статус, честная остановка процесса.
+Чистка аккаунта (каналы, группы, личка, боты, контакты, фото) — через Telethon прямо
+из `tdata`, без ввода номера и кода.
+
+Портативно: распаковали zip — работает. Ничего не пишется в `%APPDATA%`,
+папку можно перенести на другой диск или ПК целиком.
+
+## Скачать
+
+**[⬇ TG-Manager-1.2.0-windows.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
+
+1. Распакуйте в любую папку.
+2. Запустите `TGManager.exe` (`TGWorker.exe` должен лежать рядом).
+3. **Добавить контейнер** → **Папка** → положите туда `tdata` → **Запуск**.
+
+Официальный портативный Telegram Desktop программа скачает сама при первом запуске (~50 МБ).
 
 ## Возможности
 
-- **1 карточка = 1 контейнер.** Имя, цвет, папка, `tdata`.
-- **Запуск / стоп**, живой статус. Много окон сразу (`-many`, `-workdir`).
-  Стоп на Windows убивает процесс, а не прячет Telegram в трей.
-- **Прокси HTTP / SOCKS5** на каждый контейнер (логин/пароль).
-- **Официальный portable Telegram** качается кнопкой в `.\telegram\`.
-- **Чистка аккаунта** из tdata (Telethon + opentele): каналы, группы,
-  личка, боты, избранное, контакты, фото. Dry-run и блокировка сессии,
-  чтобы не словить `AUTH_KEY_DUPLICATED`. Журнал в UTF-8 (эмодзи в
-  названиях чатов больше не роняют чистку).
-- Ярлык на рабочий стол из настроек.
+- **Контейнеры.** Карточка = аккаунт: имя, цвет, папка, `tdata`. Сколько угодно.
+- **Параллельный запуск.** `Telegram.exe -workdir <контейнер> -many -noupdate`, живой статус каждые 2 секунды.
+- **Стоп — это стоп.** Процесс завершается (`TerminateProcess` + `taskkill /T`), а не прячется в трей.
+- **Прокси на контейнер.** SOCKS5 напрямую, HTTP через встроенный мост. Логин и пароль поддерживаются.
+  Строку вида `socks5://user:pass@host:port` или `host:port:user:pass` можно просто вставить.
+- **Чистка аккаунта.** Каналы, группы, личные чаты, боты (с блокировкой), «Избранное», контакты, фото профиля.
+  Dry-run перед необратимым. FloodWait ждётся автоматически. Журнал в UTF-8.
+- **Защита сессии.** Пока идёт чистка, запуск Telegram этого контейнера заблокирован — никаких `AUTH_KEY_DUPLICATED`.
+- **Нативный интерфейс.** WPF, тёмная тема, скруглённое окно, плавные анимации, PerMonitorV2 DPI.
 
-## Как пользоваться
+## Как это выглядит
 
-1. **Добавить контейнер** → имя (и прокси, если нужен).
-2. На карточке **Папка** — откроется `accounts\<id>\`.
-3. Положите туда папку **`tdata`**. Появится «✓ tdata».
-4. **Запуск**.
+<table>
+<tr>
+<td width="50%"><img src="docs/screens/tasks.png" alt="Активные задачи"><br><sub><b>Активные задачи</b> — чистка идёт в фоне, прогресс и журнал по каждому контейнеру.</sub></td>
+<td width="50%"><img src="docs/screens/cleanup.png" alt="Автоматизация"><br><sub><b>Автоматизация</b> — выбираете разделы, проверяете dry-run, подтверждаете.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screens/account.png" alt="Новый контейнер"><br><sub><b>Контейнер</b> — имя, цвет, прокси одной строкой.</sub></td>
+<td width="50%"><img src="docs/screens/settings.png" alt="Настройки"><br><sub><b>Настройки</b> — портативный Telegram, прокси-обёртка, ярлык на рабочий стол.</sub></td>
+</tr>
+</table>
 
-Telegram запускается так:
+## Как устроено
 
 ```
-Telegram.exe -workdir <папка_контейнера> -many -noupdate
+TG-Manager\
+  TGManager.exe          запуск (WPF, .NET 9, self-contained)
+  TGWorker.exe           чистка tdata (Telethon + opentele-ng), без окна
+  config.json            контейнеры и настройки
+  accounts\<id>\tdata\   сюда кладёте tdata
+  telegram\Telegram.exe  портативный Telegram (скачивается кнопкой)
+  tools\proxychains\     прокси-обёртка (скачивается кнопкой, ~200 КБ)
 ```
 
-## Прокси
+| Что | Как |
+|---|---|
+| Запуск | `Telegram.exe -workdir accounts\<id> -many -noupdate` |
+| SOCKS5 | Windows-порт [ProxyChains](https://github.com/shunf4/proxychains-windows) оборачивает процесс Telegram |
+| HTTP | локальный SOCKS5-мост внутри `TGManager.exe` → `HTTP CONNECT` → ваш прокси |
+| Чистка | `TGWorker.exe` читает `tdata` через opentele, работает с Telegram API через тот же прокси |
+| Стоп | дерево процессов контейнера завершается принудительно, pid-файл и мост очищаются |
 
-Прокси задаётся на карточке и применяется **только к этому** Telegram.
+## Сборка из исходников
 
-- **SOCKS5** — напрямую через Windows-порт ProxyChains.
-- **HTTP** — локальный SOCKS5-мост (внутри `TGManager.exe`) → HTTP CONNECT.
-
-Если обёртки нет, программа предложит скачать её (~200 КБ) в `.\tools\proxychains\`.
-Это аналог `proxychains4` с Linux.
-
-Автоматизация (чистка) ходит в Telegram API через тот же прокси контейнера
-(`python-socks`), без обёртки процесса.
-
-## Запуск из исходников
-
-GUI — Visual Studio / `dotnet`, воркер — Python 3.10+.
+Нужны .NET 9 SDK и Python 3.12.
 
 ```bat
 git clone -b windows https://github.com/scarrymany/tg-manager.git
 cd tg-manager
-dotnet run --project src\TGManager\TGManager.csproj
-```
-
-Воркер подхватится как `python -m tgmanager.automation.worker`, если рядом нет
-`TGWorker.exe`. Для этого:
-
-```bat
-python -m pip install -r requirements-worker.txt
-```
-
-Старый PyQt-вход `python main.py` / `start.bat` на этой ветке ещё собирается,
-но релизный exe — WPF.
-
-## Сборка exe
-
-На машине с Windows, .NET 9 SDK и Python 3.12:
-
-```bat
 build.bat
 ```
 
-Готово: `dist\TG-Manager\TGManager.exe` + `TGWorker.exe`.
+Результат — `dist\TG-Manager\` с `TGManager.exe` и `TGWorker.exe`.
+Для разработки: `dotnet run --project src\TGManager\TGManager.csproj`; воркер подхватится
+как `python -m tgmanager.automation.worker`, если рядом нет `TGWorker.exe`
+(`pip install -r requirements-worker.txt`).
 
-CI на этой ветке (GitHub Actions, `windows-latest`) собирает zip и публикует
-релиз `v1.1.0-windows` при каждом пуше в `windows`.
-
-## Где что лежит (portable)
-
-| Что | Путь |
-|---|---|
-| Конфиг | `.\config.json` |
-| Контейнеры / tdata | `.\accounts\<id>\tdata\` |
-| Переносной Telegram | `.\telegram\Telegram.exe` |
-| Прокси-обёртка | `.\tools\proxychains\` |
-| Воркер чистки | `.\TGWorker.exe` |
-
-Ничего не пишется в `%APPDATA%`. Удалить программу = удалить папку.
+CI (GitHub Actions, `windows-latest`) собирает zip и публикует релиз
+`v<версия>-windows` при каждом пуше в ветку `windows`; версия берётся из `TGManager.csproj`.
 
 ## Требования
 
-- Windows 10 x64 (1809+) или Windows 11 x64
-- Для исходников GUI: .NET 9 SDK
-- Для исходников воркера: Python 3.10+, Telethon, opentele-ng, python-socks
+- Windows 10 x64 (1809+) или Windows 11 x64.
+- Ничего ставить не нужно: .NET и Python внутри exe.
 
-## Возможные проблемы
+## Если что-то не так
 
-- **«Не найден Telegram»** — скачайте переносной в настройках.
-- **Прокси не применился** — скачайте прокси-обёртку.
-- **Аккаунт не запускается** — в папке должна быть именно `tdata`, не `tdata\tdata`.
-- **Чистка не стартует** — рядом должен лежать `TGWorker.exe` из того же zip.
+| Симптом | Что делать |
+|---|---|
+| «Не найден Telegram» | Настройки → **Скачать переносной Telegram** |
+| Прокси не применился | Настройки → **Скачать прокси-обёртку** |
+| Аккаунт не запускается | В папке контейнера должна быть именно `tdata`, а не `tdata\tdata` |
+| Чистка не стартует | `TGWorker.exe` должен лежать рядом с `TGManager.exe` из того же zip |
+| Telegram не остановился | Закройте его из трея (Quit Telegram) — это редкий случай зависшего процесса |
+| Что-то упало | Рядом с программой появится `error.log` — приложите его к issue |
+
+## Автор
+
+Разработчик — [@yeet17](https://t.me/yeet17) в Telegram · [scarrymany](https://github.com/scarrymany) на GitHub.
+Кнопки GitHub и Telegram есть прямо в заголовке программы.
+
+История изменений — в [CHANGELOG.md](CHANGELOG.md). Linux-версия (PyQt) осталась на ветке
+[`main`](https://github.com/scarrymany/tg-manager/tree/main) и больше не развивается.

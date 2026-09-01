@@ -10,6 +10,7 @@ public partial class DownloadWindow : Window
 {
     readonly DownloadKind _kind;
     readonly CancellationTokenSource _cts = new();
+    bool _finished;
     public bool Succeeded { get; private set; }
 
     public DownloadWindow(string title, string hint, DownloadKind kind)
@@ -21,7 +22,7 @@ public partial class DownloadWindow : Window
         TitleText.Text = title;
         HintText.Text = hint;
         Loaded += async (_, _) => await Run();
-        Closed += (_, _) => _cts.Cancel();
+        Closing += (_, _) => { if (!_finished) _cts.Cancel(); };
     }
 
     async Task Run()
@@ -32,11 +33,11 @@ public partial class DownloadWindow : Window
             switch (_kind)
             {
                 case DownloadKind.Telegram:
-                    await Bundle.DownloadTelegram(LogUi, _cts.Token);
+                    await Bundle.DownloadTelegram(LogUi, ProgressUi, _cts.Token);
                     Succeeded = Bundle.TelegramReady();
                     break;
                 case DownloadKind.Proxychains:
-                    await Bundle.DownloadProxychains(LogUi, _cts.Token);
+                    await Bundle.DownloadProxychains(LogUi, ProgressUi, _cts.Token);
                     Succeeded = Bundle.ProxychainsReady();
                     break;
                 case DownloadKind.PrepareTelegram:
@@ -48,7 +49,7 @@ public partial class DownloadWindow : Window
                     }
                     else
                     {
-                        await Bundle.DownloadTelegram(LogUi, _cts.Token);
+                        await Bundle.DownloadTelegram(LogUi, ProgressUi, _cts.Token);
                         Succeeded = Bundle.TelegramReady();
                     }
                     break;
@@ -63,14 +64,37 @@ public partial class DownloadWindow : Window
             Append("✗ " + ex.Message);
         }
 
+        _finished = true;
         Bar.IsIndeterminate = false;
         Bar.Maximum = 1;
         Bar.Value = Succeeded ? 1 : 0;
         CloseBtn.Content = Succeeded ? "Готово" : "Закрыть";
-        if (Succeeded) Append("✓ Готово.");
+        if (Succeeded)
+        {
+            Append("✓ Готово.");
+            // Если всё уже стояло — не заставляем нажимать «Готово».
+            if (_kind == DownloadKind.PrepareTelegram && LogBox.LineCount <= 3)
+            {
+                await Task.Delay(350);
+                if (IsVisible) { DialogResult = true; Close(); }
+            }
+        }
     }
 
     void LogUi(string line) => Dispatcher.BeginInvoke(() => Append(line));
+
+    void ProgressUi(DownloadProgress p) => Dispatcher.BeginInvoke(() =>
+    {
+        if (_finished) return;
+        if (p.Total <= 0)
+        {
+            Bar.IsIndeterminate = true;
+            return;
+        }
+        Bar.IsIndeterminate = false;
+        Bar.Maximum = 1;
+        Bar.Value = p.Fraction;
+    });
 
     void Append(string line)
     {
@@ -81,7 +105,7 @@ public partial class DownloadWindow : Window
 
     void OnClose(object sender, RoutedEventArgs e)
     {
-        if (!Succeeded) _cts.Cancel();
+        if (!_finished) _cts.Cancel();
         DialogResult = Succeeded;
         Close();
     }
