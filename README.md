@@ -31,7 +31,7 @@
 
 ## Скачать
 
-**[⬇ TG-Manager-1.2.2.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
+**[⬇ TG-Manager-1.2.3.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
 
 1. Распакуйте в любую папку.
 2. Запустите `TGManager.exe` (`TGWorker.exe` должен лежать рядом).
@@ -48,7 +48,9 @@
   Строку вида `socks5://user:pass@host:port` или `host:port:user:pass` можно просто вставить.
 - **Чистка аккаунта.** Каналы, группы, личные чаты, боты (с блокировкой), «Избранное», контакты, фото профиля.
   Dry-run перед необратимым. FloodWait ждётся автоматически. Журнал в UTF-8.
-- **Защита сессии.** Пока идёт чистка, запуск Telegram этого контейнера заблокирован — никаких `AUTH_KEY_DUPLICATED`.
+- **Експорт session.** Кнопка на карточке → папка → `{phone}.session` (Telethon SQLite из tdata) +
+  `{phone}.json` (SCARP_CC) + `{phone}.zip`. Telegram контейнера должен быть закрыт.
+- **Защита сессии.** Пока идёт чистка или експорт, запуск Telegram этого контейнера заблокирован — никаких `AUTH_KEY_DUPLICATED`.
 - **Нативный интерфейс.** WPF, тёмная тема, скруглённое окно, плавные анимации, PerMonitorV2 DPI.
 
 ## Как это выглядит
@@ -81,7 +83,7 @@ TG-Manager\
 | Запуск | `Telegram.exe -workdir accounts\<id> -many -noupdate` |
 | SOCKS5 | Windows-порт [ProxyChains](https://github.com/shunf4/proxychains-windows) оборачивает процесс Telegram |
 | HTTP | локальный SOCKS5-мост внутри `TGManager.exe` → `HTTP CONNECT` → ваш прокси |
-| Чистка | `TGWorker.exe` читает `tdata` через opentele, работает с Telegram API через тот же прокси |
+| Чистка / експорт | `TGWorker.exe` читает `tdata` через opentele; експорт пишет Telethon `{phone}.session` + JSON + zip |
 | Стоп | дерево процессов контейнера завершается принудительно, pid-файл и мост очищаются |
 
 ## Сборка из исходников
@@ -99,7 +101,7 @@ build.bat
 как `python -m tgmanager.automation.worker`, если рядом нет `TGWorker.exe`
 (`pip install -r requirements-worker.txt`).
 
-Структура: `src/TGManager` — WPF-приложение, `tgmanager/automation` — Python-воркер чистки,
+Структура: `src/TGManager` — WPF-приложение, `tgmanager/automation` — Python-воркер чистки и експорта,
 `worker.spec` + `worker_entry.py` — сборка `TGWorker.exe`, `assets/` — иконки.
 
 CI (GitHub Actions, `windows-latest`) собирает zip и публикует релиз `v<версия>`

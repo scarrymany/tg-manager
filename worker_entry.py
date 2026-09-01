@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Точка входа TGWorker.exe — чистка tdata без Qt."""
+"""Точка входа TGWorker.exe — чистка tdata и экспорт session-пака, без Qt."""
 from __future__ import annotations
 
 import sys

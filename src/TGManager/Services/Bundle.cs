@@ -19,7 +19,7 @@ public static class Bundle
     {
         // Таймаут — только на заголовки; тело качаем потоком и отменяем через CancellationToken.
         Timeout = TimeSpan.FromSeconds(60),
-        DefaultRequestHeaders = { { "User-Agent", "TGManager/1.2.2 (+https://github.com/scarrymany/tg-manager)" } },
+        DefaultRequestHeaders = { { "User-Agent", "TGManager/1.2.3 (+https://github.com/scarrymany/tg-manager)" } },
     };
 
     public static bool TelegramReady() => File.Exists(Paths.TelegramExe);

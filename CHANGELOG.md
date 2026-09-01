@@ -1,5 +1,19 @@
 # Изменения
 
+## 1.2.3 — 2026-09-01
+
+### Експорт session (SCARP_CC)
+
+- На карточке контейнера кнопка **Експорт** и пункт контекстного меню **Експорт session**.
+- Воркер `export-session` конвертирует `tdata` → настоящий Telethon SQLite `{phone}.session`
+  (через opentele `UseCurrentSession`, не 13-байтовая заглушка) + `{phone}.json` + `{phone}.zip`.
+- Профиль (`user_id`, имена, username, phone) берётся из `client.get_me()` после подключения.
+- Telegram контейнера должен быть остановлен; `automation.lock` как у чистки
+  (`AUTH_KEY_DUPLICATED`).
+- `2FA.txt` пишется только если пароль передан (`--twofa`); в контейнере 2FA не хранится.
+- Прокси контейнера в JSON — строка PySocks-кортежа session-shop / Telegradd
+  (`[2, host, port, true, user, pass]`) либо `null`.
+
 ## 1.2.2 — 2026-09-01
 
 ### Исправления

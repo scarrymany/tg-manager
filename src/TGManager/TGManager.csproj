@@ -10,10 +10,10 @@
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <RootNamespace>TGManager</RootNamespace>
     <AssemblyName>TGManager</AssemblyName>
-    <Version>1.2.2</Version>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
-    <FileVersion>1.2.2.0</FileVersion>
-    <InformationalVersion>1.2.2</InformationalVersion>
+    <Version>1.2.3</Version>
+    <AssemblyVersion>1.2.3.0</AssemblyVersion>
+    <FileVersion>1.2.3.0</FileVersion>
+    <InformationalVersion>1.2.3</InformationalVersion>
     <Product>TG Manager</Product>
     <AssemblyTitle>TG Manager</AssemblyTitle>
     <Company>Scarry</Company>

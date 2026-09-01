@@ -1,5 +1,7 @@
 """Модуль автоматизации аккаунтов (Telethon + opentele поверх tdata).
 
+Чистка диалогов и экспорт SCARP_CC-пака ({phone}.session + .json + zip).
+
 Ключевое правило безопасности: Telethon-сессия и Telegram Desktop НЕ должны
 работать с одним tdata одновременно (иначе AUTH_KEY_DUPLICATED → выброс сессии).
 За это отвечает взаимная блокировка в lock.py и проверки в UI.

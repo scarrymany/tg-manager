@@ -21,6 +21,16 @@ public sealed class WorkerEvent
     [JsonPropertyName("counts")] public Dictionary<string, int>? Counts { get; set; }
     [JsonPropertyName("contacts")] public bool Contacts { get; set; }
     [JsonPropertyName("photos")] public bool Photos { get; set; }
+    [JsonPropertyName("phone")] public string? Phone { get; set; }
+    [JsonPropertyName("zip")] public string? Zip { get; set; }
+    [JsonPropertyName("session")] public string? Session { get; set; }
+    [JsonPropertyName("json")] public string? JsonFile { get; set; }
+}
+
+public enum WorkerKind
+{
+    Cleanup,
+    ExportSession,
 }
 
 public sealed class WorkerHost : IDisposable
@@ -51,6 +61,27 @@ public sealed class WorkerHost : IDisposable
 
     public bool Start(Account account, IEnumerable<string> actions, bool revoke, bool dryRun)
     {
+        var workdir = Paths.AccountWorkdir(account.Id);
+        var args = new List<string> { "--workdir", workdir, "--actions", string.Join(",", actions) };
+        if (revoke) args.Add("--revoke");
+        if (dryRun) args.Add("--dry-run");
+        return Launch(account, args, lockAction: "cleanup");
+    }
+
+    public bool StartExport(Account account, string outputDir)
+    {
+        var workdir = Paths.AccountWorkdir(account.Id);
+        var args = new List<string>
+        {
+            "export-session",
+            "--workdir", workdir,
+            "--output-dir", outputDir,
+        };
+        return Launch(account, args, lockAction: "export-session");
+    }
+
+    bool Launch(Account account, List<string> args, string lockAction)
+    {
         if (IsRunning) return false;
         try { _proc?.Dispose(); } catch { /* ignore */ }
         _proc = null;
@@ -58,9 +89,6 @@ public sealed class WorkerHost : IDisposable
         var workdir = Paths.AccountWorkdir(account.Id);
         if (IsLocked(workdir) || Launcher.IsRunning(workdir)) return false;
 
-        var args = new List<string> { "--workdir", workdir, "--actions", string.Join(",", actions) };
-        if (revoke) args.Add("--revoke");
-        if (dryRun) args.Add("--dry-run");
         if (account.Proxy.Enabled)
         {
             args.AddRange(["--proxy-type", account.Proxy.Type, "--proxy-host", account.Proxy.Host,
@@ -141,7 +169,7 @@ public sealed class WorkerHost : IDisposable
         _exitRaised = false;
         // Лок до Start: иначе между процессом и файлом можно запустить Telegram.
         // Сначала pid GUI (живой), потом pid воркера.
-        WriteLock(workdir, Environment.ProcessId);
+        WriteLock(workdir, Environment.ProcessId, lockAction);
         try
         {
             if (!proc.Start())
@@ -158,7 +186,7 @@ public sealed class WorkerHost : IDisposable
             return false;
         }
         _proc = proc;
-        WriteLock(workdir, proc.Id);
+        WriteLock(workdir, proc.Id, lockAction);
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
         return true;
@@ -234,12 +262,13 @@ public sealed class WorkerHost : IDisposable
         return _pythonCache;
     }
 
-    static void WriteLock(string workdir, int pid)
+    static void WriteLock(string workdir, int pid, string action = "cleanup")
     {
         try
         {
+            var act = JsonSerializer.Serialize(action);
             File.WriteAllText(Path.Combine(workdir, "automation.lock"),
-                $"{{\"pid\":{pid},\"action\":\"cleanup\"}}");
+                $"{{\"pid\":{pid},\"action\":{act}}}");
         }
         catch { /* ignore */ }
     }

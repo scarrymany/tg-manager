@@ -41,7 +41,19 @@ public sealed class AccountVm : INotifyPropertyChanged
     public bool Stopping { get => _stopping; set { if (_stopping == value) return; _stopping = value; Raise(nameof(Stopping)); RaiseState(); } }
     public bool HasTdata { get => _hasTdata; set { if (_hasTdata == value) return; _hasTdata = value; Raise(nameof(HasTdata)); Raise(nameof(TdataLabel)); Raise(nameof(TdataBrush)); } }
 
-    public string StatusText => Busy ? "Чистка…" : Stopping ? "Остановка…" : Running ? "Запущен" : "Остановлен";
+    string _busyLabel = "Чистка…";
+    public string BusyLabel
+    {
+        get => _busyLabel;
+        set
+        {
+            if (_busyLabel == value) return;
+            _busyLabel = value;
+            if (Busy) Raise(nameof(StatusText));
+        }
+    }
+
+    public string StatusText => Busy ? BusyLabel : Stopping ? "Остановка…" : Running ? "Запущен" : "Остановлен";
     public Brush StatusFg => Busy || Stopping ? (Brush)App.Current.FindResource("YellowBrush")
                            : Running ? (Brush)App.Current.FindResource("GreenBrush")
                            : (Brush)App.Current.FindResource("MutedBrush");
@@ -52,6 +64,7 @@ public sealed class AccountVm : INotifyPropertyChanged
     public bool CanLaunch => !Running && !Busy && !Stopping;
     public bool CanStop => Running && !Busy && !Stopping;
     public bool CanCleanup => !Running && !Stopping;
+    public bool CanExport => !Running && !Stopping;
     public bool CanEdit => !Busy && !Stopping;
 
     public string TdataLabel => HasTdata ? "✓ tdata" : "✗ нет tdata";
@@ -86,6 +99,7 @@ public sealed class AccountVm : INotifyPropertyChanged
         Raise(nameof(CanLaunch));
         Raise(nameof(CanStop));
         Raise(nameof(CanCleanup));
+        Raise(nameof(CanExport));
         Raise(nameof(CanEdit));
     }
 
