@@ -42,7 +42,8 @@ public partial class TaskLogWindow : Window
                 }
                 LogBox.ScrollToEnd();
                 break;
-            case NotifyCollectionChangedAction.Reset:
+            default:
+                // Remove (обрезка лога >2000) иначе окно расходится с коллекцией.
                 LogBox.Text = string.Join("\n", _task.Log);
                 LogBox.ScrollToEnd();
                 break;

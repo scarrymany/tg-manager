@@ -56,13 +56,17 @@ public sealed class Store
 
     void Sanitize()
     {
+        var idsRewritten = false;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var a in Accounts)
         {
-            if (string.IsNullOrWhiteSpace(a.Id) || !seen.Add(a.Id))
+            if (string.IsNullOrWhiteSpace(a.Id) || !Paths.IsSafeAccountId(a.Id) || !seen.Add(a.Id))
             {
-                a.Id = Guid.NewGuid().ToString("N")[..12];
-                seen.Add(a.Id);
+                string fresh;
+                do { fresh = Guid.NewGuid().ToString("N")[..12]; }
+                while (!seen.Add(fresh));
+                a.Id = fresh;
+                idsRewritten = true;
             }
             if (string.IsNullOrWhiteSpace(a.Name)) a.Name = "Аккаунт";
             a.Proxy ??= new ProxyCfg();
@@ -75,6 +79,10 @@ public sealed class Store
         }
         Settings.TelegramBinary ??= "";
         Settings.ProxychainsBinary ??= "";
+        if (idsRewritten)
+        {
+            try { Save(); } catch { /* загрузку не блокируем */ }
+        }
     }
 
     public void Save()

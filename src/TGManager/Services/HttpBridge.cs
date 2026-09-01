@@ -11,6 +11,7 @@ public static class HttpBridge
 {
     static readonly ConcurrentDictionary<string, TcpListener> Live = new();
     static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(15);
+    static readonly TimeSpan HandshakeTimeout = TimeSpan.FromSeconds(20);
 
     public static bool AnyLive => !Live.IsEmpty;
 
@@ -40,7 +41,7 @@ public static class HttpBridge
                 while (true)
                 {
                     var client = await listener.AcceptTcpClientAsync();
-                    _ = Task.Run(() => Handle(client, http));
+                    _ = Handle(client, http);
                 }
             }
             catch (ObjectDisposedException) { }
@@ -69,17 +70,19 @@ public static class HttpBridge
     {
         using var clientOwn = client;
         client.NoDelay = true;
+        using var handshakeCts = new CancellationTokenSource(HandshakeTimeout);
+        var ct = handshakeCts.Token;
         try
         {
             var stream = client.GetStream();
             var greet = new byte[2];
-            if (await ReadExact(stream, greet) < 2 || greet[0] != 0x05) return;
+            if (await ReadExact(stream, greet, ct) < 2 || greet[0] != 0x05) return;
             var n = greet[1];
-            if (n > 0) await ReadExact(stream, new byte[n]);
-            await stream.WriteAsync(new byte[] { 0x05, 0x00 });
+            if (n > 0) await ReadExact(stream, new byte[n], ct);
+            await stream.WriteAsync(new byte[] { 0x05, 0x00 }, ct);
 
             var req = new byte[4];
-            if (await ReadExact(stream, req) < 4 || req[0] != 0x05 || req[1] != 0x01)
+            if (await ReadExact(stream, req, ct) < 4 || req[0] != 0x05 || req[1] != 0x01)
             {
                 await Reply(stream, 0x07);
                 return;
@@ -90,23 +93,23 @@ public static class HttpBridge
                 case 0x01:
                 {
                     var ip = new byte[4];
-                    if (await ReadExact(stream, ip) < 4) return;
+                    if (await ReadExact(stream, ip, ct) < 4) return;
                     host = new IPAddress(ip).ToString();
                     break;
                 }
                 case 0x03:
                 {
                     var ln = new byte[1];
-                    if (await ReadExact(stream, ln) < 1) return;
+                    if (await ReadExact(stream, ln, ct) < 1) return;
                     var name = new byte[ln[0]];
-                    if (await ReadExact(stream, name) < name.Length) return;
+                    if (await ReadExact(stream, name, ct) < name.Length) return;
                     host = Encoding.ASCII.GetString(name);
                     break;
                 }
                 case 0x04:
                 {
                     var ip = new byte[16];
-                    if (await ReadExact(stream, ip) < 16) return;
+                    if (await ReadExact(stream, ip, ct) < 16) return;
                     host = "[" + new IPAddress(ip) + "]";
                     break;
                 }
@@ -115,8 +118,13 @@ public static class HttpBridge
                     return;
             }
             var pb = new byte[2];
-            if (await ReadExact(stream, pb) < 2) return;
+            if (await ReadExact(stream, pb, ct) < 2) return;
             var port = (pb[0] << 8) | pb[1];
+            if (!IsSafeSocksHost(host))
+            {
+                await Reply(stream, 0x01);
+                return;
+            }
 
             using var up = new TcpClient { NoDelay = true };
             using (var cts = new CancellationTokenSource(ConnectTimeout))
@@ -136,9 +144,9 @@ public static class HttpBridge
                 connect += $"Proxy-Authorization: Basic {token}\r\n";
             }
             connect += "\r\n";
-            await upStream.WriteAsync(Encoding.ASCII.GetBytes(connect));
+            await upStream.WriteAsync(Encoding.ASCII.GetBytes(connect), ct);
 
-            var header = await ReadHeader(upStream);
+            var header = await ReadHeader(upStream, ct);
             if (header is null)
             {
                 await Reply(stream, 0x01);
@@ -157,16 +165,26 @@ public static class HttpBridge
         catch { /* connection dropped */ }
     }
 
+    static bool IsSafeSocksHost(string host)
+    {
+        if (string.IsNullOrEmpty(host) || host.Length > 255) return false;
+        foreach (var c in host)
+        {
+            if (c is '\r' or '\n' or '\0' or ' ' or '\t') return false;
+        }
+        return true;
+    }
+
     static Task Reply(NetworkStream s, byte code)
         => s.WriteAsync(new byte[] { 0x05, code, 0x00, 0x01, 0, 0, 0, 0, 0, 0 }).AsTask();
 
-    static async Task<string?> ReadHeader(NetworkStream s)
+    static async Task<string?> ReadHeader(NetworkStream s, CancellationToken ct)
     {
         var header = new MemoryStream();
         var one = new byte[1];
         while (true)
         {
-            var n = await s.ReadAsync(one.AsMemory(0, 1));
+            var n = await s.ReadAsync(one.AsMemory(0, 1), ct);
             if (n <= 0) return null;
             header.WriteByte(one[0]);
             if (header.Length > 8192) return null;
@@ -181,12 +199,12 @@ public static class HttpBridge
         return Encoding.ASCII.GetString(header.GetBuffer(), 0, (int)header.Length);
     }
 
-    static async Task<int> ReadExact(NetworkStream s, byte[] buf)
+    static async Task<int> ReadExact(NetworkStream s, byte[] buf, CancellationToken ct)
     {
         var off = 0;
         while (off < buf.Length)
         {
-            var n = await s.ReadAsync(buf.AsMemory(off));
+            var n = await s.ReadAsync(buf.AsMemory(off), ct);
             if (n <= 0) return off;
             off += n;
         }

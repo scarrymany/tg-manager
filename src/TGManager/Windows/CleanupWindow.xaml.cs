@@ -30,7 +30,11 @@ public partial class CleanupWindow : Window
             : "Подключение: напрямую (у контейнера не задан прокси)";
         Closed += (_, _) =>
         {
-            if (_running) _host?.Stop();
+            if (_running)
+            {
+                _host?.Stop();
+                return; // лок и Dispose — в Finished/Exited, когда процесс умрёт
+            }
             WorkerHost.ClearLock(_workdir);
             _host?.Dispose();
             _host = null;
@@ -203,6 +207,12 @@ public partial class CleanupWindow : Window
     {
         WorkerHost.ClearLock(_workdir);
         _running = false;
+        if (!IsLoaded)
+        {
+            _host?.Dispose();
+            _host = null;
+            return;
+        }
         Bar.IsIndeterminate = false;
         if (Bar.Maximum <= 0) Bar.Maximum = 1;
         Bar.Value = _failed ? 0 : Bar.Maximum;
@@ -225,7 +235,6 @@ public partial class CleanupWindow : Window
                 return;
             _failed = true;
             _host?.Stop();
-            WorkerHost.ClearLock(_workdir);
             return;
         }
         DialogResult = Requested is not null;

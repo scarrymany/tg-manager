@@ -73,11 +73,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 var dict = new Dictionary<string, (bool Locked, bool Running)>(ids.Count);
                 foreach (var id in ids)
                 {
+                    if (!Paths.IsSafeAccountId(id)) continue;
                     var wd = Paths.AccountWorkdir(id);
                     dict[id] = (WorkerHost.IsLocked(wd), Launcher.IsRunning(wd, scan));
                 }
                 return dict;
             });
+            if (_closing) return;
             foreach (var vm in Accounts)
             {
                 if (!result.TryGetValue(vm.Id, out var st)) continue;
@@ -167,6 +169,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (task is not null)
         {
             task.Stop();
+            await Task.Run(() => task.WaitStopped(10_000));
             Tasks.Remove(task);
             _tasks.Remove(id);
             CloseLogWindow(id);
@@ -214,6 +217,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var acc = _store.Get(id);
         if (acc is null) return;
         var workdir = Paths.AccountWorkdir(id);
+        if (Find(id) is { Stopping: true })
+        {
+            Status("Контейнер ещё останавливается");
+            return;
+        }
         if (WorkerHost.IsLocked(workdir) || (_tasks.TryGetValue(id, out var t) && t.IsRunning))
         {
             ConfirmWindow.Info(this, "Идёт автоматизация",
@@ -340,6 +348,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             ConfirmWindow.Info(this, "Telegram запущен",
                 "Сначала остановите Telegram этого контейнера («Стоп») — иначе сессию выбросит при подключении.");
+            return;
+        }
+        if (WorkerHost.IsLocked(workdir))
+        {
+            ConfirmWindow.Info(this, "Идёт автоматизация",
+                "Этот контейнер уже занят чисткой или проверкой. Дождитесь завершения.");
             return;
         }
         if (!WorkerHost.WorkerAvailable())

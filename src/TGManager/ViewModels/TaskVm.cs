@@ -113,8 +113,11 @@ public sealed class TaskVm : INotifyPropertyChanged
         State = "stopped";
         Current = "Остановлено";
         Host.Stop();
-        WorkerHost.ClearLock(Paths.AccountWorkdir(Account.Id));
+        // automation.lock снимается в OnExited, когда процесс реально мёртв.
+        // Иначе можно запустить Telegram, пока Telethon ещё держит сессию.
     }
+
+    public bool WaitStopped(int timeoutMs = 10_000) => Host.WaitForExit(timeoutMs);
 
     void OnEvent(WorkerEvent ev)
     {
