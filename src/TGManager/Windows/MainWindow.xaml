@@ -4,8 +4,8 @@
         xmlns:svc="clr-namespace:TGManager.Services"
         xmlns:vm="clr-namespace:TGManager.ViewModels"
         Title="TG Manager"
-        Width="1080" Height="720"
-        MinWidth="980" MinHeight="560"
+        Width="1120" Height="720"
+        MinWidth="1040" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -184,7 +184,7 @@
                                                         IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
                                                 <Button Style="{StaticResource GhostButton}" Content="📁  Папка" Width="84" Padding="0,8" Margin="0,0,6,0"
                                                         Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку — сюда положите tdata"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="Експорт" Width="82" Padding="0,8" Margin="0,0,6,0"
+                                                <Button Style="{StaticResource GhostButton}" Content="Експорт session" Width="128" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanExport}" Tag="{Binding Id}" Click="OnExportSession"
                                                         ToolTip="Експорт session — Telethon {phone}.session + .json + zip"/>
                                                 <Button Style="{StaticResource IconButton}" Content="🧹" Tag="{Binding Id}" Click="OnCleanup"
