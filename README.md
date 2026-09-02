@@ -31,6 +31,42 @@
 
 ## Скачать
 
+### Установка одной командой
+
+В PowerShell (Windows 10/11, админ не нужен):
+
+```powershell
+irm https://raw.githubusercontent.com/scarrymany/tg-manager/main/install.ps1 | iex
+```
+
+То же самое: `iwr https://raw.githubusercontent.com/scarrymany/tg-manager/main/install.ps1 | iex`
+
+Скрипт берёт **latest** GitHub Release (`TG-Manager-x.y.z.zip`, не prerelease) и ставит на рабочий стол:
+
+`Desktop\TG-Manager\TGManager.exe` (+ `TGWorker.exe`). OneDrive Desktop подхватывается сам.
+
+Если папка уже есть — обновляет файлы из zip на месте. **`config.json` и `accounts\` не трогает** (также `telegram\`, `tools\`).
+
+Ярлык **TG Manager** на рабочем столе создаётся по умолчанию.
+
+Сохранённый скрипт:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1 -InstallDir "D:\Apps\TG-Manager" -Force -NoShortcut
+```
+
+| Ключ | Что делает |
+|---|---|
+| `-InstallDir` | Папка установки (по умолчанию `<Desktop>\TG-Manager`) |
+| `-Force` | Закрыть занятые `TGManager.exe`/`TGWorker.exe` из этой папки и перезаписать exe. Данные не трёт |
+| `-NoShortcut` | Не создавать ярлык `TG Manager.lnk` |
+| `-LocalZip` | Готовый `TG-Manager-*.zip`, без GitHub (офлайн) |
+
+Для one-liner те же опции через env: `TGMANAGER_INSTALL_DIR`, `TGMANAGER_FORCE=1`, `TGMANAGER_NO_SHORTCUT=1`, `TGMANAGER_LOCAL_ZIP`.
+
+### Вручную
+
 **[⬇ TG-Manager-1.2.3.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
 
 1. Распакуйте в любую папку.
