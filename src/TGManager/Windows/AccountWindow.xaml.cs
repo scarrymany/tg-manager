@@ -14,7 +14,7 @@ public partial class AccountWindow : Window
 
     public Account? Result { get; private set; }
 
-    public AccountWindow(Account? existing = null)
+    public AccountWindow(Account? existing = null, IEnumerable<string>? folders = null)
     {
         _editing = existing is not null;
         _account = existing ?? new Account { Name = "" };
@@ -23,10 +23,21 @@ public partial class AccountWindow : Window
         TitleText.Text = _editing ? "Изменить контейнер" : "Новый контейнер";
         Title = TitleText.Text;
         NameBox.Text = _account.Name;
+        NotesBox.Text = _account.Notes ?? "";
+        ExistingFolders.Items.Add("Без папки");
+        foreach (var folder in folders ?? []) ExistingFolders.Items.Add(folder);
+        ExistingFolders.SelectedIndex = 0;
+        if (ExistingFolders.Items.Contains(_account.Folder)) ExistingFolders.SelectedItem = _account.Folder;
+        FolderBox.Text = _account.Folder ?? "";
         foreach (var c in CardColors.All)
             ColorBox.Items.Add(c);
         var ci = Array.FindIndex(CardColors.All, c => string.Equals(c, _account.Color, StringComparison.OrdinalIgnoreCase));
-        ColorBox.SelectedIndex = ci >= 0 ? ci : 0;
+        if (ci < 0)
+        {
+            ColorBox.Items.Add(_account.Color);
+            ci = ColorBox.Items.Count - 1;
+        }
+        ColorBox.SelectedIndex = ci;
         var ptype = _account.Proxy.Type switch
         {
             ProxyKinds.Http => 1,
@@ -45,9 +56,15 @@ public partial class AccountWindow : Window
 
     void OnProxyChanged(object sender, SelectionChangedEventArgs e) => ToggleProxy(animate: IsLoaded);
 
+    void OnExistingFolderChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FolderBox.Text = ExistingFolders.SelectedIndex <= 0 ? "" : ExistingFolders.SelectedItem as string ?? "";
+    }
+
     void ToggleProxy(bool animate)
     {
         var on = ProxyTag() != ProxyKinds.None;
+        ProxyPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         ProxyPanel.IsEnabled = on;
         var target = on ? 1.0 : 0.45;
         if (!animate)
@@ -122,6 +139,8 @@ public partial class AccountWindow : Window
             }
         }
         _account.Name = name;
+        _account.Notes = NotesBox.Text.Trim();
+        _account.Folder = FolderBox.Text.Trim();
         _account.Color = ColorBox.SelectedItem as string ?? "#FFFFFF";
         _account.Proxy = ptype == ProxyKinds.None
             ? new ProxyCfg()

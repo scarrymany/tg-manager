@@ -50,11 +50,13 @@ public sealed class Account
     [JsonPropertyName("proxy")] public ProxyCfg Proxy { get; set; } = new();
     [JsonPropertyName("color")] public string Color { get; set; } = "#FFFFFF";
     [JsonPropertyName("notes")] public string Notes { get; set; } = "";
+    [JsonPropertyName("folder")] public string Folder { get; set; } = "";
     [JsonPropertyName("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 }
 
 public sealed class Settings
 {
+    [JsonPropertyName("container_folders")] public List<string> ContainerFolders { get; set; } = [];
     [JsonPropertyName("telegram_binary")] public string TelegramBinary { get; set; } = "";
     [JsonPropertyName("proxychains_binary")] public string ProxychainsBinary { get; set; } = "";
     [JsonPropertyName("allow_many")] public bool AllowMany { get; set; } = true;
@@ -64,7 +66,7 @@ public static class CardColors
 {
     public static readonly string[] All =
     [
-        "#FFFFFF", "#D4D4D4", "#A3A3A3", "#737373",
-        "#E5E5E5", "#B0B0B0", "#8A8A8A", "#525252",
+        "#71C7F5", "#6EE7B7", "#FBBF24", "#FB7185",
+        "#C4B5FD", "#FDBA74", "#67E8F9", "#FFFFFF",
     ];
 }

@@ -4,7 +4,7 @@
 
 # TG Manager
 
-**Много Telegram-аккаунтов на одном Windows. Каждый — в своём контейнере, со своим прокси.**
+**Много Telegram-аккаунтов на одном Windows. Каждый - в своём контейнере, со своим прокси.**
 
 [![Release](https://img.shields.io/github/v/release/scarrymany/tg-manager?label=release&color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/scarrymany/tg-manager/total?color=white&labelColor=0a0a0a)](https://github.com/scarrymany/tg-manager/releases)
@@ -15,18 +15,18 @@
 
 <br>
 
-<img src="docs/screens/main.png" width="900" alt="TG Manager — список контейнеров">
+<img src="docs/screens/main.png" width="900" alt="TG Manager - список контейнеров">
 
 </div>
 
 <br>
 
-Один контейнер — одна папка `tdata`, своё имя, свой HTTP/SOCKS5-прокси. Запуск многих
+Один контейнер - одна папка `tdata`, своё имя, свой HTTP/SOCKS5-прокси. Запуск многих
 окон Telegram Desktop одновременно, живой статус, честная остановка процесса.
-Чистка аккаунта (каналы, группы, личка, боты, контакты, фото) — через Telethon прямо
+Чистка аккаунта (каналы, группы, личка, боты, контакты, фото) - через Telethon прямо
 из `tdata`, без ввода номера и кода.
 
-Портативно: распаковали zip — работает. Ничего не пишется в `%APPDATA%`,
+Портативно: распаковали zip - работает. Ничего не пишется в `%APPDATA%`,
 папку можно перенести на другой диск или ПК целиком.
 
 ## Скачать
@@ -45,7 +45,7 @@ irm https://raw.githubusercontent.com/scarrymany/tg-manager/main/install.ps1 | i
 
 `Desktop\TG-Manager\TGManager.exe` (+ `TGWorker.exe`). OneDrive Desktop подхватывается сам.
 
-Если папка уже есть — обновляет файлы из zip на месте. **`config.json` и `accounts\` не трогает** (также `telegram\`, `tools\`).
+Если папка уже есть - обновляет файлы из zip на месте. **`config.json` и `accounts\` не трогает** (также `telegram\`, `tools\`).
 
 Ярлык **TG Manager** на рабочем столе создаётся по умолчанию.
 
@@ -67,7 +67,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -InstallDir "D:\Apps\TG-Man
 
 ### Вручную
 
-**[⬇ TG-Manager-1.2.3.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
+**[⬇ TG-Manager-1.3.0.zip](https://github.com/scarrymany/tg-manager/releases/latest)** · Windows 10 (1809+) / 11, x64
 
 1. Распакуйте в любую папку.
 2. Запустите `TGManager.exe` (`TGWorker.exe` должен лежать рядом).
@@ -75,30 +75,48 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -InstallDir "D:\Apps\TG-Man
 
 Официальный портативный Telegram Desktop программа скачает сама при первом запуске (~50 МБ).
 
+## Новое в 1.3.0
+
+Интерфейс в стиле SCARP.CC: монохромная палитра, белые кнопки и просторные карточки.
+Поиск по имени, ID, заметкам и прокси, фильтры состояния, сортировка и сводка контейнеров.
+
+### Папки для разных задач
+
+1. Нажмите **+ Папка** над списком и задайте имя группы.
+2. Откройте **Изменить** у контейнера и укажите папку. Там же можно создать новую папку вводом имени.
+3. Выберите группу в фильтре **Папка**. Поиск и фильтр состояния применяются внутри неё.
+4. **Переименовать** обновляет название для всех контейнеров группы. **Удалить папку** сохраняет контейнеры в **Без папки**.
+
+Пустые папки сохраняются после перезапуска. Это группы в интерфейсе: физические пути tdata не меняются.
+Заметки отображаются на карточках и участвуют в поиске. **Ctrl+F** переводит фокус в поиск,
+**Escape** в поле поиска сбрасывает запрос и фильтры.
+
+Скриншоты ниже показывают интерфейс на тестовых контейнерах.
+
 ## Возможности
 
 - **Контейнеры.** Карточка = аккаунт: имя, цвет, папка, `tdata`. Сколько угодно.
 - **Параллельный запуск.** `Telegram.exe -workdir <контейнер> -many -noupdate`, живой статус каждые 2 секунды.
-- **Стоп — это стоп.** Процесс завершается (`TerminateProcess` + `taskkill /T`), а не прячется в трей.
+- **Стоп - это стоп.** Процесс завершается (`TerminateProcess` + `taskkill /T`), а не прячется в трей.
 - **Прокси на контейнер.** SOCKS5 напрямую, HTTP через встроенный мост. Логин и пароль поддерживаются.
   Строку вида `socks5://user:pass@host:port` или `host:port:user:pass` можно просто вставить.
 - **Чистка аккаунта.** Каналы, группы, личные чаты, боты (с блокировкой), «Избранное», контакты, фото профиля.
   Dry-run перед необратимым. FloodWait ждётся автоматически. Журнал в UTF-8.
 - **Експорт session.** Кнопка на карточке → папка → `{phone}.session` (Telethon SQLite из tdata) +
   `{phone}.json` (SCARP_CC) + `{phone}.zip`. Telegram контейнера должен быть закрыт.
-- **Защита сессии.** Пока идёт чистка или експорт, запуск Telegram этого контейнера заблокирован — никаких `AUTH_KEY_DUPLICATED`.
+- **Защита сессии.** Пока идёт чистка или експорт, запуск Telegram этого контейнера заблокирован - никаких `AUTH_KEY_DUPLICATED`.
 - **Нативный интерфейс.** WPF, тёмная тема, скруглённое окно, плавные анимации, PerMonitorV2 DPI.
 
 ## Как это выглядит
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screens/tasks.png" alt="Активные задачи"><br><sub><b>Активные задачи</b> — чистка идёт в фоне, прогресс и журнал по каждому контейнеру.</sub></td>
-<td width="50%"><img src="docs/screens/cleanup.png" alt="Автоматизация"><br><sub><b>Автоматизация</b> — выбираете разделы, проверяете dry-run, подтверждаете.</sub></td>
+<td width="50%"><img src="docs/screens/tasks.png" alt="Активные задачи"><br><sub><b>Активные задачи</b> - чистка идёт в фоне, прогресс и журнал по каждому контейнеру.</sub></td>
+<td width="50%"><img src="docs/screens/cleanup.png" alt="Автоматизация"><br><sub><b>Автоматизация</b> - выбираете разделы, проверяете dry-run, подтверждаете.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screens/account.png" alt="Новый контейнер"><br><sub><b>Контейнер</b> — имя, цвет, прокси одной строкой.</sub></td>
-<td width="50%"><img src="docs/screens/settings.png" alt="Настройки"><br><sub><b>Настройки</b> — портативный Telegram, прокси-обёртка, ярлык на рабочий стол.</sub></td>
+<td width="50%"><img src="docs/screens/account.png" alt="Новый контейнер"><br><sub><b>Контейнер</b> - имя, цвет, прокси одной строкой.</sub></td>
+<td width="50%"><img src="docs/screens/settings.png" alt="Настройки"><br><sub><b>Настройки</b> - портативный Telegram, прокси-обёртка, ярлык на рабочий стол.</sub></td>
 </tr>
 </table>
 
@@ -132,13 +150,13 @@ cd tg-manager
 build.bat
 ```
 
-Результат — `dist\TG-Manager\` с `TGManager.exe` и `TGWorker.exe`.
+Результат - `dist\TG-Manager\` с `TGManager.exe` и `TGWorker.exe`.
 Для разработки: `dotnet run --project src\TGManager\TGManager.csproj`; воркер подхватится
 как `python -m tgmanager.automation.worker`, если рядом нет `TGWorker.exe`
 (`pip install -r requirements-worker.txt`).
 
-Структура: `src/TGManager` — WPF-приложение, `tgmanager/automation` — Python-воркер чистки и експорта,
-`worker.spec` + `worker_entry.py` — сборка `TGWorker.exe`, `assets/` — иконки.
+Структура: `src/TGManager` - WPF-приложение, `tgmanager/automation` - Python-воркер чистки и експорта,
+`worker.spec` + `worker_entry.py` - сборка `TGWorker.exe`, `assets/` - иконки.
 
 CI (GitHub Actions, `windows-latest`) собирает zip и публикует релиз `v<версия>`
 при каждом пуше в `main`; версия берётся из `TGManager.csproj`.
@@ -156,15 +174,15 @@ CI (GitHub Actions, `windows-latest`) собирает zip и публикует
 | Прокси не применился | Настройки → **Скачать прокси-обёртку** |
 | Аккаунт не запускается | В папке контейнера должна быть именно `tdata`, а не `tdata\tdata` |
 | Чистка не стартует | `TGWorker.exe` должен лежать рядом с `TGManager.exe` из того же zip |
-| Telegram не остановился | Закройте его из трея (Quit Telegram) — это редкий случай зависшего процесса |
-| Что-то упало | Рядом с программой появится `error.log` — приложите его к issue |
+| Telegram не остановился | Закройте его из трея (Quit Telegram) - это редкий случай зависшего процесса |
+| Что-то упало | Рядом с программой появится `error.log` - приложите его к issue |
 
 ## Автор
 
-Разработчик — [@yeet17](https://t.me/yeet17) в Telegram · [scarrymany](https://github.com/scarrymany) на GitHub.
+Разработчик - [@yeet17](https://t.me/yeet17) в Telegram · [scarrymany](https://github.com/scarrymany) на GitHub.
 Кнопки GitHub и Telegram есть прямо в заголовке программы.
 
-История изменений — в [CHANGELOG.md](CHANGELOG.md). Лицензия — [MIT](LICENSE).
+История изменений - в [CHANGELOG.md](CHANGELOG.md). Лицензия - [MIT](LICENSE).
 
 Старая Linux-версия (PyQt) сохранена в релизе
 [`linux-legacy`](https://github.com/scarrymany/tg-manager/releases/tag/linux-legacy) и не поддерживается.

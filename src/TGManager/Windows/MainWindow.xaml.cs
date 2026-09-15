@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using TGManager.Services;
@@ -20,6 +22,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     readonly Dictionary<string, TaskLogWindow> _logWindows = [];
     bool _polling;
     bool _closing;
+    ICollectionView? _accountsView;
+
+    public string Overview => $"{Accounts.Count} всего    /    {Accounts.Count(a => a.Running && !a.Busy && !a.Stopping)} запущено    /    {Accounts.Count(a => a.Busy || a.Stopping)} занято    /    {Accounts.Count(a => !a.HasTdata)} без tdata";
+    public string ResultCount => $"Показано {_accountsView?.Cast<AccountVm>().Count() ?? 0} из {Accounts.Count}";
+    public bool NoResults => HasAccounts && _accountsView?.IsEmpty == true;
 
     public ObservableCollection<AccountVm> Accounts { get; } = [];
     public ObservableCollection<TaskVm> Tasks { get; } = [];
@@ -35,7 +42,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DataContext = this;
         InitializeComponent();
         Chrome.Attach(this, WindowFrame);
-        AccountList.ItemsSource = Accounts;
+        _accountsView = CollectionViewSource.GetDefaultView(Accounts);
+        _accountsView.Filter = item => item is AccountVm account && AccountFilter.Matches(
+            account, SearchBox.Text, (AccountStatusFilter)Math.Max(0, FilterBox.SelectedIndex),
+            (FolderFilter.SelectedItem as ComboBoxItem)?.Tag as string);
+        AccountList.ItemsSource = _accountsView;
+        Accounts.CollectionChanged += (_, e) =>
+        {
+            if (e.OldItems is not null)
+                foreach (AccountVm account in e.OldItems) account.PropertyChanged -= OnAccountChanged;
+            if (e.NewItems is not null)
+                foreach (AccountVm account in e.NewItems) account.PropertyChanged += OnAccountChanged;
+            RefreshFolders();
+            RefreshView();
+        };
+        PreviewKeyDown += OnWorkspaceKeyDown;
         TaskList.ItemsSource = Tasks;
         VersionText.Text = "v" + App.VersionString;
         StateChanged += (_, _) => SyncMaxIcon();
@@ -56,6 +77,125 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     AccountVm? Find(string id) => Accounts.FirstOrDefault(a => a.Id == id);
+
+    void OnAccountChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AccountVm.Folder)) RefreshFolders();
+        if (e.PropertyName is nameof(AccountVm.Name) or nameof(AccountVm.Notes)
+            or nameof(AccountVm.Folder)
+            or nameof(AccountVm.ProxySummary) or nameof(AccountVm.Running)
+            or nameof(AccountVm.Busy) or nameof(AccountVm.Stopping) or nameof(AccountVm.HasTdata))
+            RefreshView();
+    }
+
+    void RefreshView()
+    {
+        if (_accountsView is null) return;
+        _accountsView.Refresh();
+        HasAccounts = Accounts.Count > 0;
+        Raise(nameof(Overview));
+        Raise(nameof(ResultCount));
+        Raise(nameof(NoResults));
+        Raise(nameof(CanManageFolder));
+    }
+
+    void OnSearchChanged(object sender, TextChangedEventArgs e) => RefreshView();
+
+    void OnFilterChanged(object sender, SelectionChangedEventArgs e) => RefreshView();
+
+    IEnumerable<string> FolderNames() => Accounts.Select(a => a.Folder).Concat(_store.Settings.ContainerFolders).Where(f => f.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase);
+
+    public bool CanManageFolder => (FolderFilter?.SelectedItem as ComboBoxItem)?.Tag is string { Length: > 0 };
+
+    void OnCreateFolder(object sender, RoutedEventArgs e) => EditFolder(null);
+
+    void OnRenameFolder(object sender, RoutedEventArgs e)
+    {
+        if ((FolderFilter.SelectedItem as ComboBoxItem)?.Tag is string { Length: > 0 } folder) EditFolder(folder);
+    }
+
+    void EditFolder(string? current)
+    {
+        var dialog = new FolderWindow(FolderNames(), current) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        SaveFolderChange(current, dialog.Result);
+    }
+
+    void OnDeleteFolder(object sender, RoutedEventArgs e)
+    {
+        if ((FolderFilter.SelectedItem as ComboBoxItem)?.Tag is not string { Length: > 0 } folder) return;
+        if (!ConfirmWindow.Ask(this, "Удалить папку?", $"Папка «{folder}» будет удалена из списка. Контейнеры останутся в разделе «Без папки». Данные аккаунтов сохранятся.")) return;
+        SaveFolderChange(folder, "");
+    }
+
+    void SaveFolderChange(string? current, string target)
+    {
+        var affected = _store.Accounts.Where(a => current is not null &&
+            string.Equals(a.Folder, current, StringComparison.OrdinalIgnoreCase)).ToList();
+        try { _store.ChangeFolder(current, target); }
+        catch (Exception ex)
+        {
+            ConfirmWindow.Info(this, "Не удалось сохранить папку", ex.Message);
+            return;
+        }
+        foreach (var account in affected) Find(account.Id)?.Apply(account);
+        RefreshFolders();
+        foreach (ComboBoxItem item in FolderFilter.Items)
+            if (string.Equals(item.Tag as string, target, StringComparison.OrdinalIgnoreCase)) FolderFilter.SelectedItem = item;
+        RefreshView();
+        Status(target.Length == 0 ? "Папка удалена, контейнеры сохранены" : "Папка сохранена");
+    }
+
+    void RefreshFolders()
+    {
+        var selected = (FolderFilter.SelectedItem as ComboBoxItem)?.Tag as string;
+        FolderFilter.Items.Clear();
+        FolderFilter.Items.Add(new ComboBoxItem { Content = "Все папки" });
+        FolderFilter.Items.Add(new ComboBoxItem { Content = "Без папки", Tag = "" });
+        foreach (var folder in FolderNames())
+            FolderFilter.Items.Add(new ComboBoxItem { Content = folder, Tag = folder });
+        FolderFilter.SelectedIndex = 0;
+        foreach (ComboBoxItem item in FolderFilter.Items)
+            if (selected is not null && string.Equals(item.Tag as string, selected, StringComparison.OrdinalIgnoreCase))
+                FolderFilter.SelectedItem = item;
+    }
+
+    void OnSortChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_accountsView is null) return;
+        using (_accountsView.DeferRefresh())
+        {
+            _accountsView.SortDescriptions.Clear();
+            if (SortBox.SelectedIndex > 0)
+                _accountsView.SortDescriptions.Add(new SortDescription(nameof(AccountVm.Name),
+                    SortBox.SelectedIndex == 1 ? ListSortDirection.Ascending : ListSortDirection.Descending));
+        }
+    }
+
+    void OnResetFilters(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        FilterBox.SelectedIndex = 0;
+        FolderFilter.SelectedIndex = 0;
+        SearchBox.Focus();
+    }
+
+    void OnWorkspaceKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            OnNavContainers(this, new RoutedEventArgs());
+            SearchBox.Focus();
+            SearchBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && SearchBox.IsKeyboardFocusWithin)
+        {
+            OnResetFilters(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+    }
 
     /// <summary>
     /// Опрос состояния контейнеров. Снимок процессов и чтение командных строк — в фоне,
@@ -119,7 +259,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     void OnAddAccount(object sender, RoutedEventArgs e)
     {
-        var dlg = new AccountWindow { Owner = this };
+        var dlg = new AccountWindow(folders: FolderNames()) { Owner = this };
         if (dlg.ShowDialog() != true || dlg.Result is null) return;
         var account = dlg.Result;
         Directory.CreateDirectory(Paths.AccountWorkdir(account.Id));
@@ -144,7 +284,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (IdOf(sender) is not { } id) return;
         var acc = _store.Get(id);
         if (acc is null) return;
-        var dlg = new AccountWindow(acc) { Owner = this };
+        var dlg = new AccountWindow(acc, FolderNames()) { Owner = this };
         if (dlg.ShowDialog() != true || dlg.Result is null) return;
         _store.Update(dlg.Result);
         Find(id)?.Apply(dlg.Result);

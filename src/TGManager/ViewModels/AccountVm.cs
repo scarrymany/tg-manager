@@ -18,6 +18,9 @@ public sealed class AccountVm : INotifyPropertyChanged
 
     public string Id => Model.Id;
     public string Name => Model.Name;
+    public string Notes => Model.Notes ?? "";
+    public string Folder => Model.Folder ?? "";
+    public string FolderLabel => Folder.Length == 0 ? "Без папки" : Folder;
     public string Color => string.IsNullOrWhiteSpace(Model.Color) ? "#FFFFFF" : Model.Color;
     public Brush ColorBrush
     {
@@ -78,6 +81,9 @@ public sealed class AccountVm : INotifyPropertyChanged
     {
         Model = account;
         Raise(nameof(Name));
+        Raise(nameof(Notes));
+        Raise(nameof(Folder));
+        Raise(nameof(FolderLabel));
         Raise(nameof(Color));
         Raise(nameof(ColorBrush));
         Raise(nameof(ProxySummary));

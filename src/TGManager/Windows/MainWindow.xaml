@@ -4,7 +4,7 @@
         xmlns:svc="clr-namespace:TGManager.Services"
         xmlns:vm="clr-namespace:TGManager.ViewModels"
         Title="TG Manager"
-        Width="1120" Height="720"
+        Width="1220" Height="800"
         MinWidth="1040" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -84,7 +84,7 @@
                                   Width="16" Height="16" Stretch="Uniform"
                                   Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
                         </Button>
-                        <Button Style="{StaticResource ChromeButton}" Click="OnTelegram" ToolTip="Разработчик в Telegram — @yeet17" Margin="0,0,6,0">
+                        <Button Style="{StaticResource ChromeButton}" Click="OnTelegram" ToolTip="Разработчик в Telegram - @yeet17" Margin="0,0,6,0">
                             <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                   Width="17" Height="17" Stretch="Uniform"
                                   Data="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
@@ -124,21 +124,68 @@
             <Grid Grid.Row="2">
                 <!-- Containers -->
                 <Grid x:Name="ContainersPage">
-                    <ScrollViewer x:Name="AccountsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Margin="24,22,24,12">
+                        <TextBlock Text="Ваши контейнеры" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource FgWhiteBrush}"/>
+                        <TextBlock Text="{Binding Overview}" Margin="0,8,0,20" Foreground="{StaticResource MutedBrush}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="Поиск по имени, заметке или прокси" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
+                                <TextBox x:Name="SearchBox" Style="{StaticResource FieldBox}" TextChanged="OnSearchChanged" ToolTip="Поиск: Ctrl+F. Сброс: Escape" AutomationProperties.Name="Поиск контейнеров"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                <TextBlock Text="Состояние" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
+                                <ComboBox x:Name="FilterBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Фильтр состояния">
+                                    <ComboBoxItem Content="Все контейнеры"/>
+                                    <ComboBoxItem Content="Запущены"/>
+                                    <ComboBoxItem Content="Остановлены"/>
+                                    <ComboBoxItem Content="Заняты"/>
+                                    <ComboBoxItem Content="Без tdata"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="0,0,12,0">
+                                <TextBlock Text="Порядок" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
+                                <ComboBox x:Name="SortBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnSortChanged" AutomationProperties.Name="Сортировка контейнеров">
+                                    <ComboBoxItem Content="Как добавлены"/>
+                                    <ComboBoxItem Content="Имя: А → Я"/>
+                                    <ComboBoxItem Content="Имя: Я → А"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="Сбросить" VerticalAlignment="Bottom" Click="OnResetFilters"/>
+                        </Grid>
+                        <DockPanel Margin="0,14,0,0">
+                            <TextBlock Text="Папка" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{StaticResource MutedBrush}"/>
+                            <ComboBox x:Name="FolderFilter" Width="240" Style="{StaticResource FieldCombo}" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Папка контейнеров"/>
+                            <Button Content="+ Папка" Style="{StaticResource GhostButton}" Click="OnCreateFolder" Margin="8,0,0,0"/>
+                            <Button Content="Переименовать" Style="{StaticResource GhostButton}" Click="OnRenameFolder" IsEnabled="{Binding CanManageFolder}" Margin="8,0,0,0"/>
+                            <Button Content="Удалить папку" Style="{StaticResource GhostButton}" Click="OnDeleteFolder" IsEnabled="{Binding CanManageFolder}" Margin="8,0,0,0"/>
+                            <TextBlock Text="{Binding ResultCount}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                        </DockPanel>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" x:Name="AccountsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Visibility="{Binding HasAccounts, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl x:Name="AccountList" Margin="16">
+                        <ItemsControl x:Name="AccountList" Margin="24,0,24,16">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:AccountVm}">
                     <Border Background="{StaticResource CardBrush}"
                             BorderBrush="{StaticResource HairlineBrush}"
                             BorderThickness="1"
-                            CornerRadius="6"
-                            Margin="0,0,0,10"
-                            Height="60"
-                            Padding="12,8">
+                            CornerRadius="12"
+                            Margin="0,0,0,12"
+                            MinHeight="126"
+                            Padding="16,14">
                                         <Border.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="Експорт session" Tag="{Binding Id}" Click="OnExportSession"
+                                                <MenuItem Header="Экспорт session" Tag="{Binding Id}" Click="OnExportSession"
                                                           IsEnabled="{Binding CanExport}"/>
                                                 <MenuItem Header="Папка контейнера" Tag="{Binding Id}" Click="OnFolder"/>
                                                 <MenuItem Header="Автоматизация (чистка)" Tag="{Binding Id}" Click="OnCleanup"
@@ -159,6 +206,7 @@
                                             </EventTrigger>
                                         </Border.Triggers>
                                         <Grid>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
@@ -167,31 +215,35 @@
                                             </Grid.ColumnDefinitions>
                                             <Border Width="3" Height="36" CornerRadius="2" Background="{Binding ColorBrush}" VerticalAlignment="Center"/>
                                             <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource FgBrush}"
+                                                <TextBlock Text="{Binding Name}" ToolTip="{Binding FolderLabel}" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource FgBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                    <TextBlock Text="{Binding MetaLeft}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                                    <TextBlock Text="{Binding MetaLeft}" MaxWidth="360" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBlock Text="{Binding TdataLabel}" FontSize="12" Foreground="{Binding TdataBrush}"/>
+                                                    <TextBlock Text="{Binding Notes}" MaxWidth="230" TextTrimming="CharacterEllipsis" Margin="14,0,0,0" Foreground="{StaticResource MutedBrush}" ToolTip="{Binding Notes}"/>
                                                 </StackPanel>
                                             </StackPanel>
-                                            <Border Grid.Column="2" Background="{Binding StatusBg}" CornerRadius="4" Padding="8,3" VerticalAlignment="Center" Margin="0,0,10,0">
-                                                <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusFg}"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="160">
+                                                <Border Background="{Binding StatusBg}" CornerRadius="4" Padding="8,3" HorizontalAlignment="Right">
+                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusFg}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding FolderLabel}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderLabel}" FontSize="11" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,14,0,0">
                                                 <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Width="96" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanLaunch}" Tag="{Binding Id}" Click="OnLaunch"/>
                                                 <Button Style="{StaticResource StopButton}" Content="■  Стоп" Width="80" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="📁  Папка" Width="84" Padding="0,8" Margin="0,0,6,0"
-                                                        Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку — сюда положите tdata"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="Експорт session" Width="128" Padding="0,8" Margin="0,0,6,0"
+                                                <Button Style="{StaticResource GhostButton}" Content="Папка" Width="84" Padding="0,8" Margin="0,0,6,0"
+                                                        Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку - сюда положите tdata"/>
+                                                <Button Style="{StaticResource GhostButton}" Content="Экспорт session" Width="128" Padding="0,8" Margin="0,0,6,0"
                                                         IsEnabled="{Binding CanExport}" Tag="{Binding Id}" Click="OnExportSession"
-                                                        ToolTip="Експорт session — Telethon {phone}.session + .json + zip"/>
-                                                <Button Style="{StaticResource IconButton}" Content="🧹" Tag="{Binding Id}" Click="OnCleanup"
+                                                        ToolTip="Экспорт session - Telethon {phone}.session + .json + zip"/>
+                                                <Button Style="{StaticResource IconButton}" Content="Чистка" Width="76" Tag="{Binding Id}" Click="OnCleanup"
                                                         IsEnabled="{Binding CanCleanup}" ToolTip="Автоматизация (чистка)" Margin="0,0,6,0"/>
-                                                <Button Style="{StaticResource IconButton}" Content="✏" Tag="{Binding Id}" Click="OnEdit"
+                                                <Button Style="{StaticResource IconButton}" Content="Изменить" Width="90" Tag="{Binding Id}" Click="OnEdit"
                                                         IsEnabled="{Binding CanEdit}" ToolTip="Изменить" Margin="0,0,6,0"/>
-                                                <Button Style="{StaticResource DangerButton}" Width="34" Height="34" Padding="0" Content="🗑"
+                                                <Button Style="{StaticResource DangerButton}" Width="80" Height="34" Padding="0" Content="Удалить"
                                                         IsEnabled="{Binding CanEdit}" Tag="{Binding Id}" Click="OnDelete" ToolTip="Удалить"/>
                                             </StackPanel>
                                         </Grid>
@@ -201,7 +253,12 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding NoResults, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Ничего не найдено" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Измените запрос или выберите другое состояние." Margin="0,10,0,18" Foreground="{StaticResource MutedBrush}"/>
+                        <Button Content="Сбросить фильтры" Style="{StaticResource GhostButton}" Click="OnResetFilters" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center"
                                 Visibility="{Binding HasAccounts, Converter={StaticResource InvBoolToVis}}">
                         <Border Width="88" Height="88" CornerRadius="8" Background="{StaticResource CardBrush}"
                                 BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" HorizontalAlignment="Center">
@@ -238,10 +295,10 @@
                                         <Border Background="{StaticResource CardBrush}"
                                                 BorderBrush="{StaticResource HairlineBrush}"
                                                 BorderThickness="1"
-                                                CornerRadius="6"
+                                                CornerRadius="12"
                                                 Margin="0,0,0,10"
                                                 Height="66"
-                                                Padding="12,8">
+                                                Padding="16,14">
                                             <Border.RenderTransform>
                                                 <TranslateTransform Y="0"/>
                                             </Border.RenderTransform>
@@ -284,7 +341,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку или експорт session — задача появится здесь."
+                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку или экспорт session - задача появится здесь."
                                    TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"
                                    Foreground="{StaticResource SubtleBrush}"
                                    Visibility="{Binding HasTasks, Converter={StaticResource InvBoolToVis}}"/>

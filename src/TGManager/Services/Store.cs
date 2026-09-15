@@ -70,6 +70,8 @@ public sealed class Store
             }
             if (string.IsNullOrWhiteSpace(a.Name)) a.Name = "Аккаунт";
             a.Proxy ??= new ProxyCfg();
+            a.Folder = (a.Folder ?? "").Trim();
+            a.Notes ??= "";
             a.Proxy.Type = (a.Proxy.Type ?? "").Trim().ToLowerInvariant();
             if (a.Proxy.Type is not (ProxyKinds.Http or ProxyKinds.Socks5)) a.Proxy.Type = ProxyKinds.None;
             a.Proxy.Host ??= "";
@@ -78,6 +80,8 @@ public sealed class Store
             if (string.IsNullOrWhiteSpace(a.Color)) a.Color = "#FFFFFF";
         }
         Settings.TelegramBinary ??= "";
+        Settings.ContainerFolders = (Settings.ContainerFolders ?? []).Where(f => !string.IsNullOrWhiteSpace(f))
+            .Select(f => f.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         Settings.ProxychainsBinary ??= "";
         if (idsRewritten)
         {
@@ -88,10 +92,47 @@ public sealed class Store
     public void Save()
     {
         Paths.EnsureDirs();
+        var folders = Settings.ContainerFolders.Concat(Accounts.Select(a => a.Folder))
+            .Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => f.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var previous = Settings.ContainerFolders;
+        Settings.ContainerFolders = folders;
+        try { WriteConfig(); }
+        catch
+        {
+            Settings.ContainerFolders = previous;
+            throw;
+        }
+    }
+
+    void WriteConfig()
+    {
         var tmp = Paths.ConfigFile + ".tmp";
         var json = JsonSerializer.Serialize(new StoreFile { Settings = Settings, Accounts = Accounts }, JsonOpt);
         File.WriteAllText(tmp, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.Move(tmp, Paths.ConfigFile, overwrite: true);
+    }
+
+    public void ChangeFolder(string? current, string target)
+    {
+        target = target.Trim();
+        if (current is null && target.Length == 0) throw new ArgumentException("Folder name is required.", nameof(target));
+        var folders = Settings.ContainerFolders;
+        var affected = Accounts.Where(a => current is not null &&
+            string.Equals(a.Folder, current, StringComparison.OrdinalIgnoreCase)).ToList();
+        var previous = affected.Select(a => a.Folder).ToList();
+        Settings.ContainerFolders = folders.Concat(Accounts.Select(a => a.Folder))
+            .Where(f => !string.IsNullOrWhiteSpace(f) && !string.Equals(f, current, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (target.Length > 0) Settings.ContainerFolders.Add(target);
+        foreach (var account in affected) account.Folder = target;
+        try { Save(); }
+        catch
+        {
+            Settings.ContainerFolders = folders;
+            for (var i = 0; i < affected.Count; i++) affected[i].Folder = previous[i];
+            throw;
+        }
     }
 
     public void Add(Account account)

@@ -28,15 +28,13 @@ jobs:
 
       - name: Version
         id: ver
-        shell: bash
+        shell: pwsh
         run: |
-          ver="$(awk -F'[<>]' '/<Version>/{print $3; exit}' src/TGManager/TGManager.csproj)"
-          if [[ -z "$ver" ]]; then
-            echo "Version is missing in TGManager.csproj" >&2
-            exit 1
-          fi
-          echo "version=$ver" >> "$GITHUB_OUTPUT"
-          echo "APP_VERSION=$ver" >> "$GITHUB_ENV"
+          [xml]$project = Get-Content src/TGManager/TGManager.csproj
+          $ver = $project.Project.PropertyGroup.Version
+          if (-not $ver) { throw "Version is missing in TGManager.csproj" }
+          "version=$ver" >> $env:GITHUB_OUTPUT
+          "APP_VERSION=$ver" >> $env:GITHUB_ENV
 
       - name: .NET 9
         uses: actions/setup-dotnet@v4
@@ -57,6 +55,13 @@ jobs:
 
       - name: Icons
         run: python assets/make_icon.py
+
+      - name: Regression checks
+        run: |
+          python -m unittest discover -s tests -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/TGManager.Checks -- --render "${{ runner.temp }}/tg-manager-screens"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Publish WPF
         run: |
@@ -113,13 +118,12 @@ jobs:
         run: |
           $tag = "v${{ env.APP_VERSION }}"
           $zip = Get-ChildItem dist/TG-Manager-*.zip | Select-Object -First 1
-          $notes = Get-Content -Raw RELEASE_NOTES.md
-          $title = "TG Manager ${{ env.APP_VERSION }} — Windows 10/11"
+          $title = "TG Manager ${{ env.APP_VERSION }} - Windows 10/11"
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $zip.FullName --title $title --notes $notes --target ${{ github.sha }} --latest
+            gh release create $tag $zip.FullName --title $title --notes-file RELEASE_NOTES.md --target ${{ github.sha }} --latest
           } else {
             gh release upload $tag $zip.FullName --clobber
-            gh release edit $tag --notes $notes --title $title --latest
+            gh release edit $tag --notes-file RELEASE_NOTES.md --title $title --latest
           }
           gh release view $tag

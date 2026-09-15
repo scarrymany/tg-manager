@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svc="clr-namespace:TGManager.Services"
         Title="Контейнер"
-        Width="460" Height="600"
+        Width="520" Height="720"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -84,6 +84,12 @@
                         </Grid>
                     </StackPanel>
 
+                    <TextBlock Text="ПАПКА КОНТЕЙНЕРОВ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="FolderBox" Style="{StaticResource FieldBox}" MaxLength="64" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="ExistingFolders" Style="{StaticResource FieldCombo}" SelectionChanged="OnExistingFolderChanged" Margin="0,0,0,6" AutomationProperties.Name="Существующие папки"/>
+                    <TextBlock Text="Введите новое имя или выберите существующую папку. Пустое имя: без папки." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,14"/>
+                    <TextBlock Text="ЗАМЕТКА" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="NotesBox" Style="{StaticResource FieldBox}" Margin="0,0,0,14" MaxLength="500" ToolTip="Назначение аккаунта, проект или другая заметка"/>
                     <TextBlock Text="После создания нажмите «Папка» в строке контейнера и положите туда папку tdata от нужного аккаунта."
                                TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}"/>
                 </StackPanel>

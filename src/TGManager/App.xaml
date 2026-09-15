@@ -7,8 +7,8 @@
         <Color x:Key="BgColor">#0A0A0A</Color>
         <Color x:Key="CardColor">#141414</Color>
         <Color x:Key="HoverColor">#1A1A1A</Color>
-        <Color x:Key="HairlineColor">#1E1E1E</Color>
-        <Color x:Key="HairlineStrongColor">#2A2A2A</Color>
+        <Color x:Key="HairlineColor">#242424</Color>
+        <Color x:Key="HairlineStrongColor">#363636</Color>
         <Color x:Key="AccentColor">#FFFFFF</Color>
 
         <SolidColorBrush x:Key="BgBrush" Color="#0A0A0A"/>
@@ -19,21 +19,21 @@
         <SolidColorBrush x:Key="FgBrush" Color="#D4D4D4"/>
         <SolidColorBrush x:Key="FgWhiteBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#A3A3A3"/>
-        <SolidColorBrush x:Key="SubtleBrush" Color="#737373"/>
+        <SolidColorBrush x:Key="SubtleBrush" Color="#929292"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="AccentFgBrush" Color="#000000"/>
-        <SolidColorBrush x:Key="HairlineBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="HairlineStrongBrush" Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="HairlineBrush" Color="#242424"/>
+        <SolidColorBrush x:Key="HairlineStrongBrush" Color="#363636"/>
         <SolidColorBrush x:Key="GreenBrush" Color="#4ADE80"/>
-        <SolidColorBrush x:Key="GreenBgBrush" Color="#141C16"/>
+        <SolidColorBrush x:Key="GreenBgBrush" Color="#14251A"/>
         <SolidColorBrush x:Key="RedBrush" Color="#F87171"/>
         <SolidColorBrush x:Key="RedBgBrush" Color="#1C1414"/>
         <SolidColorBrush x:Key="YellowBrush" Color="#FBBF24"/>
         <SolidColorBrush x:Key="GlassBrush" Color="#141414"/>
         <SolidColorBrush x:Key="GlassHoverBrush" Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="GlassActiveBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="GlassActiveBrush" Color="#242424"/>
 
-        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI, Inter</FontFamily>
+        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
         <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Segoe UI Mono</FontFamily>
 
         <Duration x:Key="HoverIn">0:0:0.12</Duration>
@@ -197,7 +197,7 @@
                                 <SolidColorBrush Color="#141414"/>
                             </Border.Background>
                             <Border.BorderBrush>
-                                <SolidColorBrush Color="#1E1E1E"/>
+                                <SolidColorBrush Color="#242424"/>
                             </Border.BorderBrush>
                             <Grid>
                                 <Border x:Name="Press" CornerRadius="5" Margin="0" Opacity="0" Background="#000000" IsHitTestVisible="False"/>
@@ -215,7 +215,7 @@
                                                             To="#1A1A1A" Duration="{StaticResource HoverIn}"/>
                                             <ColorAnimation Storyboard.TargetName="Bd"
                                                             Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                                            To="#2A2A2A" Duration="{StaticResource HoverIn}"/>
+                                                            To="#363636" Duration="{StaticResource HoverIn}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
