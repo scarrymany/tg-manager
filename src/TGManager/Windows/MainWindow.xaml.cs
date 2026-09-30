@@ -24,7 +24,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     bool _closing;
     ICollectionView? _accountsView;
 
-    public string Overview => $"{Accounts.Count} всего    /    {Accounts.Count(a => a.Running && !a.Busy && !a.Stopping)} запущено    /    {Accounts.Count(a => a.Busy || a.Stopping)} занято    /    {Accounts.Count(a => !a.HasTdata)} без tdata";
+    public int TotalCount => Accounts.Count;
+    public int RunningCount => Accounts.Count(a => a.Running && !a.Busy && !a.Stopping);
+    public int BusyCount => Accounts.Count(a => a.Busy || a.Stopping);
+    public int MissingDataCount => Accounts.Count(a => !a.HasTdata);
     public string ResultCount => $"Показано {_accountsView?.Cast<AccountVm>().Count() ?? 0} из {Accounts.Count}";
     public bool NoResults => HasAccounts && _accountsView?.IsEmpty == true;
 
@@ -93,7 +96,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_accountsView is null) return;
         _accountsView.Refresh();
         HasAccounts = Accounts.Count > 0;
-        Raise(nameof(Overview));
+        Raise(nameof(TotalCount));
+        Raise(nameof(RunningCount));
+        Raise(nameof(BusyCount));
+        Raise(nameof(MissingDataCount));
         Raise(nameof(ResultCount));
         Raise(nameof(NoResults));
         Raise(nameof(CanManageFolder));
@@ -253,7 +259,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     void RefreshTasksNav()
     {
         var active = Tasks.Count(t => t.IsRunning);
-        NavTasks.Content = active > 0 ? $"Активные задачи ({active})" : "Активные задачи";
+        NavTasksLabel.Text = active > 0 ? $"Задачи · {active}" : "Активные задачи";
+        NavTasks.ToolTip = active > 0 ? $"Активных задач: {active}" : "Активные задачи";
         HasTasks = Tasks.Count > 0;
     }
 

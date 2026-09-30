@@ -38,11 +38,19 @@ internal static class StoreChecks
             loaded = Store.Load();
             if (loaded.Accounts.Single().Folder != "" || loaded.Accounts.Single().Id != account.Id)
                 throw new InvalidOperationException("Folder removal must preserve account identity");
+            store.Settings.TelegramBinary = "D:\\Apps\\Telegram.exe";
+            store.Settings.ProxychainsBinary = "D:\\Apps\\proxychains.exe";
+            store.Settings.AllowMany = false;
+            store.Save();
+            loaded = Store.Load();
+            if (loaded.Settings.TelegramBinary != store.Settings.TelegramBinary ||
+                loaded.Settings.ProxychainsBinary != store.Settings.ProxychainsBinary || loaded.Settings.AllowMany)
+                throw new InvalidOperationException("Launcher settings must survive a restart");
             File.WriteAllText(Paths.ConfigFile, "{\"settings\":{},\"accounts\":[{\"id\":\"legacy\",\"name\":\"Legacy\"}]}");
             loaded = Store.Load();
             if (loaded.Accounts.Single().Folder != "" || loaded.Settings.ContainerFolders.Count != 0)
                 throw new InvalidOperationException("Legacy config compatibility failed");
-            Console.WriteLine("PASS Folder creation, empty persistence, rename, removal and legacy config");
+            Console.WriteLine("PASS Folder creation, empty persistence, rename, removal, launcher settings and legacy config");
         }
         finally
         {

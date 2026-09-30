@@ -121,13 +121,13 @@ public static class Chrome
         show.BeginAnimation(UIElement.OpacityProperty, anim);
     }
 
-    public static WindowChrome Make(double captionHeight = 48)
+    public static WindowChrome Make(double captionHeight = 38)
         => new()
         {
             CaptionHeight = captionHeight,
             ResizeBorderThickness = new Thickness(6),
             GlassFrameThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(16),
+            CornerRadius = new CornerRadius(6),
             UseAeroCaptionButtons = false,
             NonClientFrameEdges = NonClientFrameEdges.None,
         };

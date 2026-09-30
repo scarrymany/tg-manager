@@ -9,10 +9,17 @@
         AllowsTransparency="True"
         ResizeMode="NoResize"
         Background="Transparent"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{StaticResource FgBrush}"
+        FontSize="13"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="48" ResizeBorderThickness="0" GlassFrameThickness="0"
-                      CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
+                      CornerRadius="6" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <svc:HexToBrush x:Key="HexToBrush"/>
@@ -26,14 +33,16 @@
         </DataTemplate>
     </Window.Resources>
     <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
-            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="48"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid Margin="16,0,8,0">
+            <Border Grid.Row="0" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
+            <Border Grid.Row="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0" IsHitTestVisible="False"/>
+            <Grid Margin="20,0,8,0">
                 <TextBlock x:Name="TitleText" Text="Новый контейнер" FontSize="14" FontWeight="SemiBold"
                            Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource CloseButton}" HorizontalAlignment="Right" Click="OnClose">
@@ -42,7 +51,7 @@
                 </Button>
             </Grid>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="22,8,22,8">
+                <StackPanel Margin="20,16,20,16">
                     <TextBlock Text="НАЗВАНИЕ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,6"/>
                     <TextBox x:Name="NameBox" Style="{StaticResource FieldBox}" Margin="0,0,0,14" MaxLength="64"/>
 
@@ -94,7 +103,7 @@
                                TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}"/>
                 </StackPanel>
             </ScrollViewer>
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="22,8,22,18">
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,16,20,16">
                 <Button Style="{StaticResource GhostButton}" Content="Отмена" Click="OnClose" Margin="0,0,8,0" IsCancel="True"/>
                 <Button Style="{StaticResource PrimaryButton}" Content="Сохранить" Click="OnSave" IsDefault="True"/>
             </StackPanel>

@@ -1,6 +1,8 @@
 using TGManager.Services;
 using TGManager.ViewModels;
 
+var renderOutput = args.Length == 2 && args[0] == "--render" ? System.IO.Path.GetFullPath(args[1]) : null;
+
 var account = new AccountVm(new Account
 {
     Name = "Рабочий аккаунт",
@@ -36,4 +38,4 @@ Check(!AccountFilter.Matches(account, "", AccountStatusFilter.All, ""), "Unassig
 Check(AccountFilter.Matches(account, "", AccountStatusFilter.All, null), "All folders includes grouped accounts");
 Check(!AccountFilter.Matches(account, "missing", AccountStatusFilter.All, "Работа"), "Folder combines with search");
 StoreChecks.Run();
-if (args.Length == 2 && args[0] == "--render") UiChecks.Run(System.IO.Path.GetFullPath(args[1]));
+if (renderOutput is not null) UiChecks.Run(renderOutput);

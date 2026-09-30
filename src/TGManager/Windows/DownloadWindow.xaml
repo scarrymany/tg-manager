@@ -8,29 +8,38 @@
         AllowsTransparency="True"
         ResizeMode="NoResize"
         Background="Transparent"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{StaticResource FgBrush}"
+        FontSize="13"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="48" ResizeBorderThickness="0" GlassFrameThickness="0"
-                      CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
+                      CornerRadius="6" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
     </WindowChrome.WindowChrome>
     <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
-            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="48"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            <Border Grid.Row="0" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
+            <Border Grid.Row="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0" IsHitTestVisible="False"/>
             <TextBlock x:Name="TitleText" Text="Скачивание" Margin="18,0" FontSize="14" FontWeight="SemiBold"
                        Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
-            <StackPanel Grid.Row="1" Margin="22,8,22,8">
+            <StackPanel Grid.Row="1" Margin="20,16,20,16">
                 <TextBlock x:Name="HintText" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,12"/>
                 <ProgressBar x:Name="Bar" Height="6" IsIndeterminate="True" Minimum="0" Maximum="1" Margin="0,0,0,12"/>
-                <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="140" IsReadOnly="True"
+                <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="140" IsReadOnly="True" VerticalContentAlignment="Top"
                          FontFamily="{StaticResource MonoFont}" FontSize="12" VerticalScrollBarVisibility="Auto"
                          AcceptsReturn="True" TextWrapping="Wrap"/>
             </StackPanel>
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="22,8,22,16">
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,16,20,16">
                 <Button x:Name="CloseBtn" Style="{StaticResource GhostButton}" Content="Отмена" Click="OnClose"/>
             </StackPanel>
         </Grid>

@@ -33,6 +33,9 @@ jobs:
           [xml]$project = Get-Content src/TGManager/TGManager.csproj
           $ver = $project.Project.PropertyGroup.Version
           if (-not $ver) { throw "Version is missing in TGManager.csproj" }
+          if ("${{ github.ref }}".StartsWith("refs/tags/v") -and "${{ github.ref_name }}" -ne "v$ver") {
+            throw "Tag does not match TGManager.csproj version $ver"
+          }
           "version=$ver" >> $env:GITHUB_OUTPUT
           "APP_VERSION=$ver" >> $env:GITHUB_ENV
 
@@ -96,11 +99,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item dist/app/TGManager.exe $out/TGManager.exe
           Copy-Item dist/TGWorker.exe $out/TGWorker.exe
+          Copy-Item src/TGManager/Assets/Fonts/LICENSE.txt $out/Inter-LICENSE.txt
           Copy-Item README.md $out/README.txt
           if (Test-Path RELEASE_NOTES.md) { Copy-Item RELEASE_NOTES.md $out/RELEASE_NOTES.txt }
           $zip = "dist/TG-Manager-$ver.zip"
           if (Test-Path $zip) { Remove-Item $zip }
           Compress-Archive -Path $out -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $zip -Leaf)" | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding ascii
           Get-Item $zip | Format-List Name, Length
           "PORTABLE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -108,7 +114,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TG-Manager-${{ env.APP_VERSION }}
-          path: dist/TG-Manager-*.zip
+          path: |
+            dist/TG-Manager-*.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: GitHub Release
@@ -119,11 +127,18 @@ jobs:
           $tag = "v${{ env.APP_VERSION }}"
           $zip = Get-ChildItem dist/TG-Manager-*.zip | Select-Object -First 1
           $title = "TG Manager ${{ env.APP_VERSION }} - Windows 10/11"
+          $tagRefsJson = gh api "repos/${{ github.repository }}/git/matching-refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw "Cannot verify release tag" }
+          $existingTag = @($tagRefsJson | ConvertFrom-Json) | Where-Object { $_.ref -eq "refs/tags/$tag" }
+          if ($existingTag) {
+            $tagCommit = gh api "repos/${{ github.repository }}/commits/$tag" --jq .sha
+            if ($LASTEXITCODE -ne 0 -or $tagCommit -ne "${{ github.sha }}") { throw "Existing tag does not target this build commit" }
+          }
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $zip.FullName --title $title --notes-file RELEASE_NOTES.md --target ${{ github.sha }} --latest
+            gh release create $tag $zip.FullName dist/SHA256SUMS.txt --title $title --notes-file RELEASE_NOTES.md --target ${{ github.sha }} --latest
           } else {
-            gh release upload $tag $zip.FullName --clobber
+            gh release upload $tag $zip.FullName dist/SHA256SUMS.txt --clobber
             gh release edit $tag --notes-file RELEASE_NOTES.md --title $title --latest
           }
           gh release view $tag

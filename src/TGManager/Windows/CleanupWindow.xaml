@@ -9,29 +9,38 @@
         ResizeMode="CanResize"
         MinWidth="500" MinHeight="520"
         Background="Transparent"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{StaticResource FgBrush}"
+        FontSize="13"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
-                      CornerRadius="16" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
+                      CornerRadius="6" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/>
     </WindowChrome.WindowChrome>
     <Border x:Name="WindowFrame" Background="{StaticResource CardBrush}"
-            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="16">
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="48"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid Margin="16,0,8,0">
+            <Border Grid.Row="0" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
+            <Border Grid.Row="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0" IsHitTestVisible="False"/>
+            <Grid Margin="20,0,8,0">
                 <TextBlock x:Name="TitleText" Text="Автоматизация" FontSize="14" FontWeight="SemiBold"
-                           Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
+                           Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,52,0"/>
                 <Button Style="{StaticResource CloseButton}" HorizontalAlignment="Right" Click="OnClose">
                     <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                           StrokeThickness="1.2" Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20"/>
                 </Button>
             </Grid>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="22,8,22,8">
+                <StackPanel Margin="20,16,20,16">
                     <TextBlock Text="⚠ Действия необратимы. Telegram этого контейнера должен быть закрыт (во время чистки запуск заблокирован)."
                                TextWrapping="Wrap" Foreground="{StaticResource YellowBrush}" FontSize="12" Margin="0,0,0,10"/>
                     <TextBlock x:Name="ConnLabel" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,12"/>
@@ -53,14 +62,14 @@
 
                     <TextBlock x:Name="StatusLabel" Text="Готово к проверке." TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
                     <ProgressBar x:Name="Bar" Height="6" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,8"/>
-                    <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="130" IsReadOnly="True"
+                    <TextBox x:Name="LogBox" Style="{StaticResource FieldBox}" Height="130" IsReadOnly="True" VerticalContentAlignment="Top"
                              FontFamily="{StaticResource MonoFont}" FontSize="12" VerticalScrollBarVisibility="Auto"
                              AcceptsReturn="True" TextWrapping="Wrap"/>
                     <CheckBox x:Name="ConfirmChk" Style="{StaticResource GlassCheck}" Content="Я понимаю, что это необратимо"
                               Margin="0,12,0,0" Checked="OnConfirm" Unchecked="OnConfirm"/>
                 </StackPanel>
             </ScrollViewer>
-            <Grid Grid.Row="2" Margin="22,8,22,16">
+            <Grid Grid.Row="2" Margin="20,16,20,16">
                 <Button x:Name="DryBtn" Style="{StaticResource GhostButton}" Content="Проверить (dry-run)"
                         HorizontalAlignment="Left" Click="OnDryRun"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

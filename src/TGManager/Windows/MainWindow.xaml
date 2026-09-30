@@ -1,362 +1,129 @@
 <Window x:Class="TGManager.Windows.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:svc="clr-namespace:TGManager.Services"
-        xmlns:vm="clr-namespace:TGManager.ViewModels"
-        Title="TG Manager"
-        Width="1220" Height="800"
-        MinWidth="1040" MinHeight="560"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        ResizeMode="CanResize"
-        Background="Transparent"
-        Foreground="{StaticResource FgBrush}"
+        xmlns:svc="clr-namespace:TGManager.Services" xmlns:vm="clr-namespace:TGManager.ViewModels"
+        Title="TG Manager" Width="1260" Height="820" MinWidth="1040" MinHeight="560"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True"
+        ResizeMode="CanResize" Background="Transparent" Closing="OnClosing"
         FontFamily="{StaticResource UiFont}"
+        Foreground="{StaticResource FgBrush}"
         FontSize="13"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True"
-        Closing="OnClosing">
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="58"
-                      ResizeBorderThickness="6"
-                      GlassFrameThickness="0"
-                      CornerRadius="16"
-                      UseAeroCaptionButtons="False"
-                      NonClientFrameEdges="None"/>
-    </WindowChrome.WindowChrome>
-    <Window.Resources>
-        <svc:BoolToVis x:Key="BoolToVis"/>
-        <svc:InvBoolToVis x:Key="InvBoolToVis"/>
-
-        <!-- Появление карточки в списке -->
-        <Storyboard x:Key="CardEnter">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                             From="8" To="0" Duration="0:0:0.22">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-    </Window.Resources>
-
-    <Border x:Name="WindowFrame"
-            BorderBrush="{StaticResource HairlineBrush}"
-            BorderThickness="1"
-            Background="{StaticResource BgBrush}"
-            CornerRadius="16"
-            ClipToBounds="True">
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+    <WindowChrome.WindowChrome><WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="6" UseAeroCaptionButtons="False" NonClientFrameEdges="None"/></WindowChrome.WindowChrome>
+    <Window.Resources><svc:BoolToVis x:Key="BoolToVis"/><svc:InvBoolToVis x:Key="InvBoolToVis"/></Window.Resources>
+    <Border x:Name="WindowFrame" Background="{StaticResource BgBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="58"/>
-                <RowDefinition Height="46"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="28"/>
-            </Grid.RowDefinitions>
-
-            <!-- Title bar -->
-            <Border Grid.Row="0" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="16,0,8,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image Width="28" Height="28" Source="/Assets/logo_mark.png" RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="TG Manager" FontSize="15" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/>
-                            <TextBlock Text="Менеджер Telegram-контейнеров" FontSize="11" Foreground="{StaticResource SubtleBrush}"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource PrimaryButton}"
-                                Content="＋  Добавить контейнер"
-                                Margin="0,0,8,0"
-                                Padding="14,8"
-                                Click="OnAddAccount"/>
-                        <Button Style="{StaticResource GhostButton}"
-                                Content="⚙  Настройки"
-                                Margin="0,0,8,0"
-                                Click="OnOpenSettings"/>
-                        <Button Style="{StaticResource ChromeButton}" Click="OnGitHub" ToolTip="Исходники на GitHub">
-                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-                        </Button>
-                        <Button Style="{StaticResource ChromeButton}" Click="OnTelegram" ToolTip="Разработчик в Telegram - @yeet17" Margin="0,0,6,0">
-                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="17" Height="17" Stretch="Uniform"
-                                  Data="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                        </Button>
-                        <Border Width="1" Height="18" Background="{StaticResource HairlineStrongBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <Button Style="{StaticResource ChromeButton}" Click="OnMinimize" ToolTip="Свернуть">
-                            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Data="M4,10 H16" Width="20" Height="20" Stretch="None"/>
-                        </Button>
-                        <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Click="OnMaximize" ToolTip="Развернуть">
-                            <Path x:Name="MaxIcon"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.2"
-                                  Data="M5,5 H15 V15 H5 Z" Width="20" Height="20" Stretch="None"/>
-                        </Button>
-                        <Button Style="{StaticResource CloseButton}" Click="OnCloseClick" ToolTip="Закрыть">
-                            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20" Stretch="None"/>
-                        </Button>
+            <Grid.RowDefinitions><RowDefinition Height="38"/><RowDefinition Height="*"/><RowDefinition Height="28"/></Grid.RowDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="216"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Grid.ColumnSpan="2" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+                <Grid Margin="14,0,4,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="/Assets/logo_mark.png" Width="16" Height="16"/><TextBlock Text="TG Manager" Margin="8,0,0,0" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/></StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Style="{StaticResource ChromeButton}" Click="OnMinimize" ToolTip="Свернуть" AutomationProperties.Name="Свернуть"><Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" Data="M5,10 H15" Width="20" Height="20"/></Button>
+                        <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Click="OnMaximize" ToolTip="Развернуть" AutomationProperties.Name="Развернуть"><Path x:Name="MaxIcon" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" Data="M5,5 H15 V15 H5 Z" Width="20" Height="20"/></Button>
+                        <Button Style="{StaticResource CloseButton}" Click="OnCloseClick" ToolTip="Закрыть" AutomationProperties.Name="Закрыть"><Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" Data="M5,5 L15,15 M15,5 L5,15" Width="20" Height="20"/></Button>
                     </StackPanel>
                 </Grid>
             </Border>
-
-            <!-- Nav -->
-            <Border Grid.Row="1" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                    <Button x:Name="NavContainers" Style="{StaticResource GhostButton}" Tag="active"
-                            Content="Контейнеры" Click="OnNavContainers" Margin="0,0,8,0"/>
-                    <Button x:Name="NavTasks" Style="{StaticResource GhostButton}"
-                            Content="Активные задачи" Click="OnNavTasks"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Pages -->
-            <Grid Grid.Row="2">
-                <!-- Containers -->
-                <Grid x:Name="ContainersPage">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Margin="24,22,24,12">
-                        <TextBlock Text="Ваши контейнеры" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource FgWhiteBrush}"/>
-                        <TextBlock Text="{Binding Overview}" Margin="0,8,0,20" Foreground="{StaticResource MutedBrush}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,12,0">
-                                <TextBlock Text="Поиск по имени, заметке или прокси" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
-                                <TextBox x:Name="SearchBox" Style="{StaticResource FieldBox}" TextChanged="OnSearchChanged" ToolTip="Поиск: Ctrl+F. Сброс: Escape" AutomationProperties.Name="Поиск контейнеров"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                                <TextBlock Text="Состояние" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
-                                <ComboBox x:Name="FilterBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Фильтр состояния">
-                                    <ComboBoxItem Content="Все контейнеры"/>
-                                    <ComboBoxItem Content="Запущены"/>
-                                    <ComboBoxItem Content="Остановлены"/>
-                                    <ComboBoxItem Content="Заняты"/>
-                                    <ComboBoxItem Content="Без tdata"/>
-                                </ComboBox>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Margin="0,0,12,0">
-                                <TextBlock Text="Порядок" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
-                                <ComboBox x:Name="SortBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnSortChanged" AutomationProperties.Name="Сортировка контейнеров">
-                                    <ComboBoxItem Content="Как добавлены"/>
-                                    <ComboBoxItem Content="Имя: А → Я"/>
-                                    <ComboBoxItem Content="Имя: Я → А"/>
-                                </ComboBox>
-                            </StackPanel>
-                            <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="Сбросить" VerticalAlignment="Bottom" Click="OnResetFilters"/>
-                        </Grid>
-                        <DockPanel Margin="0,14,0,0">
-                            <TextBlock Text="Папка" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{StaticResource MutedBrush}"/>
-                            <ComboBox x:Name="FolderFilter" Width="240" Style="{StaticResource FieldCombo}" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Папка контейнеров"/>
-                            <Button Content="+ Папка" Style="{StaticResource GhostButton}" Click="OnCreateFolder" Margin="8,0,0,0"/>
-                            <Button Content="Переименовать" Style="{StaticResource GhostButton}" Click="OnRenameFolder" IsEnabled="{Binding CanManageFolder}" Margin="8,0,0,0"/>
-                            <Button Content="Удалить папку" Style="{StaticResource GhostButton}" Click="OnDeleteFolder" IsEnabled="{Binding CanManageFolder}" Margin="8,0,0,0"/>
-                            <TextBlock Text="{Binding ResultCount}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                        </DockPanel>
+            <Border Grid.Row="1" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <StackPanel Margin="20,24,20,26" Orientation="Horizontal">
+                        <Border Width="36" Height="36" CornerRadius="8" Background="{StaticResource AccentBrush}"><Path Fill="#0A0A0A" Data="M1,6 L25,1 L18,24 L12,17 L7,21 L8,13 Z M8,13 L20,5 L12,17" Width="24" Height="24" Stretch="Uniform"/></Border>
+                        <StackPanel Margin="11,0,0,0" VerticalAlignment="Center"><TextBlock Text="TG MANAGER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="SCARP.CC" FontSize="10" Margin="0,3,0,0" Foreground="{StaticResource SubtleBrush}"/></StackPanel>
                     </StackPanel>
-                    <ScrollViewer Grid.Row="1" x:Name="AccountsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                  Visibility="{Binding HasAccounts, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl x:Name="AccountList" Margin="24,0,24,16">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:AccountVm}">
-                    <Border Background="{StaticResource CardBrush}"
-                            BorderBrush="{StaticResource HairlineBrush}"
-                            BorderThickness="1"
-                            CornerRadius="12"
-                            Margin="0,0,0,12"
-                            MinHeight="126"
-                            Padding="16,14">
-                                        <Border.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Header="Экспорт session" Tag="{Binding Id}" Click="OnExportSession"
-                                                          IsEnabled="{Binding CanExport}"/>
-                                                <MenuItem Header="Папка контейнера" Tag="{Binding Id}" Click="OnFolder"/>
-                                                <MenuItem Header="Автоматизация (чистка)" Tag="{Binding Id}" Click="OnCleanup"
-                                                          IsEnabled="{Binding CanCleanup}"/>
-                                                <Separator/>
-                                                <MenuItem Header="Изменить" Tag="{Binding Id}" Click="OnEdit"
-                                                          IsEnabled="{Binding CanEdit}"/>
-                                                <MenuItem Header="Удалить" Tag="{Binding Id}" Click="OnDelete"
-                                                          IsEnabled="{Binding CanEdit}"/>
-                                            </ContextMenu>
-                                        </Border.ContextMenu>
-                                        <Border.RenderTransform>
-                                            <TranslateTransform Y="0"/>
-                                        </Border.RenderTransform>
-                                        <Border.Triggers>
-                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                                <BeginStoryboard Storyboard="{StaticResource CardEnter}"/>
-                                            </EventTrigger>
-                                        </Border.Triggers>
-                                        <Grid>
-                                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Border Width="3" Height="36" CornerRadius="2" Background="{Binding ColorBrush}" VerticalAlignment="Center"/>
-                                            <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" ToolTip="{Binding FolderLabel}" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource FgBrush}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                                    <TextBlock Text="{Binding MetaLeft}" MaxWidth="360" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                                    <TextBlock Text="{Binding TdataLabel}" FontSize="12" Foreground="{Binding TdataBrush}"/>
-                                                    <TextBlock Text="{Binding Notes}" MaxWidth="230" TextTrimming="CharacterEllipsis" Margin="14,0,0,0" Foreground="{StaticResource MutedBrush}" ToolTip="{Binding Notes}"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="160">
-                                                <Border Background="{Binding StatusBg}" CornerRadius="4" Padding="8,3" HorizontalAlignment="Right">
-                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusFg}"/>
-                                                </Border>
-                                                <TextBlock Text="{Binding FolderLabel}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderLabel}" FontSize="11" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" Margin="0,5,0,0"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,14,0,0">
-                                                <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Width="96" Padding="0,8" Margin="0,0,6,0"
-                                                        IsEnabled="{Binding CanLaunch}" Tag="{Binding Id}" Click="OnLaunch"/>
-                                                <Button Style="{StaticResource StopButton}" Content="■  Стоп" Width="80" Padding="0,8" Margin="0,0,6,0"
-                                                        IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="Папка" Width="84" Padding="0,8" Margin="0,0,6,0"
-                                                        Tag="{Binding Id}" Click="OnFolder" ToolTip="Открыть папку - сюда положите tdata"/>
-                                                <Button Style="{StaticResource GhostButton}" Content="Экспорт session" Width="128" Padding="0,8" Margin="0,0,6,0"
-                                                        IsEnabled="{Binding CanExport}" Tag="{Binding Id}" Click="OnExportSession"
-                                                        ToolTip="Экспорт session - Telethon {phone}.session + .json + zip"/>
-                                                <Button Style="{StaticResource IconButton}" Content="Чистка" Width="76" Tag="{Binding Id}" Click="OnCleanup"
-                                                        IsEnabled="{Binding CanCleanup}" ToolTip="Автоматизация (чистка)" Margin="0,0,6,0"/>
-                                                <Button Style="{StaticResource IconButton}" Content="Изменить" Width="90" Tag="{Binding Id}" Click="OnEdit"
-                                                        IsEnabled="{Binding CanEdit}" ToolTip="Изменить" Margin="0,0,6,0"/>
-                                                <Button Style="{StaticResource DangerButton}" Width="80" Height="34" Padding="0" Content="Удалить"
-                                                        IsEnabled="{Binding CanEdit}" Tag="{Binding Id}" Click="OnDelete" ToolTip="Удалить"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="12,0,12,16">
+                            <TextBlock Text="РАБОЧЕЕ ПРОСТРАНСТВО" Style="{StaticResource SectionLabel}" Margin="14,0,0,10" FontSize="10"/>
+                            <Button x:Name="NavContainers" Style="{StaticResource NavButton}" Tag="active" Click="OnNavContainers"><StackPanel Orientation="Horizontal"><Path Data="M1,1 H7 V7 H1 Z M11,1 H17 V7 H11 Z M1,11 H7 V17 H1 Z M11,11 H17 V17 H11 Z" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" Width="18" Height="18" Margin="0,0,11,0"/><TextBlock Text="Контейнеры" VerticalAlignment="Center"/></StackPanel></Button>
+                            <Button x:Name="NavTasks" Style="{StaticResource NavButton}" Click="OnNavTasks"><StackPanel Orientation="Horizontal"><Path Data="M3,1 H15 V17 H3 Z M6,5 H12 M6,9 H12 M6,13 H10" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" Width="18" Height="18" Margin="0,0,11,0"/><TextBlock x:Name="NavTasksLabel" Text="Активные задачи" VerticalAlignment="Center"/></StackPanel></Button>
+                            <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="14,20,14,20"/>
+                            <TextBlock Text="ПАПКИ КОНТЕЙНЕРОВ" Style="{StaticResource SectionLabel}" Margin="14,0,0,10" FontSize="10"/>
+                            <ComboBox x:Name="FolderFilter" Style="{StaticResource FieldCombo}" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Папка контейнеров" Margin="2,0,2,10"/>
+                            <Grid Margin="2,0,2,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="40"/><ColumnDefinition Width="40"/></Grid.ColumnDefinitions>
+                                <Button Content="+ Папка" Style="{StaticResource GhostButton}" Click="OnCreateFolder" Padding="8,8" Margin="0,0,6,0"/>
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Click="OnRenameFolder" IsEnabled="{Binding CanManageFolder}" Padding="0" Margin="0,0,6,0" ToolTip="Переименовать папку" AutomationProperties.Name="Переименовать папку"><Path Data="M3,12 L11,4 L14,7 L6,15 H3 Z M10,5 L13,8" Stroke="{StaticResource MutedBrush}" StrokeThickness="1.2" Width="18" Height="18"/></Button>
+                                <Button Grid.Column="2" Style="{StaticResource DangerButton}" Click="OnDeleteFolder" IsEnabled="{Binding CanManageFolder}" Padding="0" ToolTip="Удалить папку, сохранив контейнеры" AutomationProperties.Name="Удалить папку"><Path Data="M4,4 H14 M7,1 H11 M5,4 L6,16 H12 L13,4 M8,7 V13 M10,7 V13" Stroke="{StaticResource RedBrush}" StrokeThickness="1.1" Width="18" Height="18"/></Button>
+                            </Grid>
+                            <TextBlock Text="Группировка по проектам.&#x0a;Данные остаются в контейнерах." Foreground="{StaticResource SubtleBrush}" FontSize="11" TextWrapping="Wrap" Margin="14,14,10,0" LineHeight="17"/>
+                        </StackPanel>
                     </ScrollViewer>
-
-                    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding NoResults, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Ничего не найдено" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Измените запрос или выберите другое состояние." Margin="0,10,0,18" Foreground="{StaticResource MutedBrush}"/>
-                        <Button Content="Сбросить фильтры" Style="{StaticResource GhostButton}" Click="OnResetFilters" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                Visibility="{Binding HasAccounts, Converter={StaticResource InvBoolToVis}}">
-                        <Border Width="88" Height="88" CornerRadius="8" Background="{StaticResource CardBrush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" HorizontalAlignment="Center">
-                            <Image Width="44" Height="44" Source="/Assets/logo_mark.png" RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
-                        <TextBlock Text="Пока нет контейнеров" FontSize="17" FontWeight="Bold"
-                                   Foreground="{StaticResource FgWhiteBrush}" HorizontalAlignment="Center" Margin="0,14,0,0"/>
-                        <TextBlock Text="Создайте первый контейнер, дайте имя,&#x0a;а затем положите папку tdata в его папку."
-                                   TextAlignment="Center" Foreground="{StaticResource SubtleBrush}" Margin="0,8,0,16"/>
-                        <Button Style="{StaticResource PrimaryButton}" Content="＋  Создать контейнер"
-                                HorizontalAlignment="Center" Click="OnAddAccount"/>
+                    <StackPanel Grid.Row="2" Margin="12,0,12,16">
+                        <Button Style="{StaticResource NavButton}" Click="OnOpenSettings"><StackPanel Orientation="Horizontal"><TextBlock Text="⚙" Width="18" Margin="0,0,11,0" FontSize="17"/><TextBlock Text="Настройки" VerticalAlignment="Center"/></StackPanel></Button>
+                        <StackPanel Orientation="Horizontal" Margin="14,10,0,0"><Button Style="{StaticResource ChromeButton}" Content="GitHub" Width="65" Height="26" Click="OnGitHub" FontSize="11"/><Button Style="{StaticResource ChromeButton}" Content="Telegram" Width="70" Height="26" Click="OnTelegram" FontSize="11" ToolTip="Разработчик @yeet17"/></StackPanel>
                     </StackPanel>
                 </Grid>
-
-                <!-- Tasks -->
+            </Border>
+            <Grid Grid.Row="1" Grid.Column="1">
+                <Grid x:Name="ContainersPage">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <StackPanel Margin="26,22,26,16">
+                        <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel><TextBlock Text="Контейнеры" FontSize="21" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Ваши Telegram-аккаунты в одном рабочем пространстве" Foreground="{StaticResource MutedBrush}" Margin="0,7,12,0" TextWrapping="Wrap"/></StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="+  Добавить контейнер" Click="OnAddAccount" VerticalAlignment="Top"/>
+                        </Grid>
+                        <UniformGrid Columns="4" Margin="0,0,-12,20">
+                            <Border Style="{StaticResource StatPanel}" Margin="0,0,12,0"><StackPanel><TextBlock Text="{Binding TotalCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Всего контейнеров" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></Border>
+                            <Border Style="{StaticResource StatPanel}" Margin="0,0,12,0"><StackPanel><TextBlock Text="{Binding RunningCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Запущено" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></Border>
+                            <Border Style="{StaticResource StatPanel}" Margin="0,0,12,0"><StackPanel><TextBlock Text="{Binding BusyCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Занято задачами" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></Border>
+                            <Border Style="{StaticResource StatPanel}" Margin="0,0,12,0"><StackPanel><TextBlock Text="{Binding MissingDataCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Без tdata" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></Border>
+                        </UniformGrid>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="176"/><ColumnDefinition Width="176"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Text="Поиск" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,7"/><TextBox x:Name="SearchBox" Style="{StaticResource FieldBox}" TextChanged="OnSearchChanged" ToolTip="Имя, ID, заметка или прокси. Ctrl+F / Escape" AutomationProperties.Name="Поиск контейнеров"/></StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Text="Состояние" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,7"/><ComboBox x:Name="FilterBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnFilterChanged" AutomationProperties.Name="Фильтр состояния"><ComboBoxItem Content="Все контейнеры"/><ComboBoxItem Content="Запущены"/><ComboBoxItem Content="Остановлены"/><ComboBoxItem Content="Заняты"/><ComboBoxItem Content="Без tdata"/></ComboBox></StackPanel>
+                            <StackPanel Grid.Column="2" Margin="0,0,12,0"><TextBlock Text="Порядок" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,7"/><ComboBox x:Name="SortBox" Style="{StaticResource FieldCombo}" SelectedIndex="0" SelectionChanged="OnSortChanged" AutomationProperties.Name="Сортировка контейнеров"><ComboBoxItem Content="Как добавлены"/><ComboBoxItem Content="Имя: А → Я"/><ComboBoxItem Content="Имя: Я → А"/></ComboBox></StackPanel>
+                            <Button Grid.Column="3" Content="Сбросить" Style="{StaticResource GhostButton}" VerticalAlignment="Bottom" Height="42" Click="OnResetFilters"/>
+                        </Grid>
+                        <TextBlock Text="{Binding ResultCount}" Foreground="{StaticResource SubtleBrush}" FontSize="11" Margin="0,12,0,0"/>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" x:Name="AccountsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding HasAccounts, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl x:Name="AccountList" Margin="26,0,26,22"><ItemsControl.ItemTemplate><DataTemplate DataType="{x:Type vm:AccountVm}">
+                            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,12" Padding="18,16">
+                                <Border.ContextMenu><ContextMenu><MenuItem Header="Экспорт session" Tag="{Binding Id}" Click="OnExportSession" IsEnabled="{Binding CanExport}"/><MenuItem Header="Папка контейнера" Tag="{Binding Id}" Click="OnFolder"/><MenuItem Header="Автоматизация (чистка)" Tag="{Binding Id}" Click="OnCleanup" IsEnabled="{Binding CanCleanup}"/><Separator/><MenuItem Header="Изменить" Tag="{Binding Id}" Click="OnEdit" IsEnabled="{Binding CanEdit}"/><MenuItem Header="Удалить" Tag="{Binding Id}" Click="OnDelete" IsEnabled="{Binding CanEdit}"/></ContextMenu></Border.ContextMenu>
+                                <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Background="{Binding ColorBrush}" Width="3" Height="36" CornerRadius="2" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Margin="12,0,16,0"><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource FgWhiteBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/><WrapPanel Margin="0,6,0,0"><TextBlock Text="{Binding MetaLeft}" FontSize="11" Foreground="{StaticResource MutedBrush}" MaxWidth="280" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding TdataLabel}" FontSize="11" Foreground="{Binding TdataBrush}"/><TextBlock Text="{Binding Notes}" MaxWidth="240" TextTrimming="CharacterEllipsis" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="12,0,0,0" ToolTip="{Binding Notes}"/></WrapPanel></StackPanel>
+                                    <StackPanel Grid.Column="2" MaxWidth="150"><Border Background="{Binding StatusBg}" CornerRadius="4" Padding="8,4" HorizontalAlignment="Right"><TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{Binding StatusFg}"/></Border><TextBlock Text="{Binding FolderLabel}" FontSize="11" Foreground="{StaticResource SubtleBrush}" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderLabel}" Margin="0,5,0,0"/></StackPanel>
+                                    <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="12,14,0,-4">
+                                        <Button Style="{StaticResource PrimaryButton}" Content="▶  Запуск" Padding="12,6" MinHeight="36" Margin="0,0,6,4" IsEnabled="{Binding CanLaunch}" Tag="{Binding Id}" Click="OnLaunch"/>
+                                        <Button Style="{StaticResource StopButton}" Content="■  Стоп" Padding="12,6" MinHeight="36" Margin="0,0,6,4" IsEnabled="{Binding CanStop}" Tag="{Binding Id}" Click="OnStop"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="Папка" Padding="12,6" MinHeight="36" Margin="0,0,6,4" Tag="{Binding Id}" Click="OnFolder"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="Экспорт session" Padding="12,6" MinHeight="36" Margin="0,0,6,4" IsEnabled="{Binding CanExport}" Tag="{Binding Id}" Click="OnExportSession"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="Чистка" Padding="12,6" MinHeight="36" Margin="0,0,6,4" IsEnabled="{Binding CanCleanup}" Tag="{Binding Id}" Click="OnCleanup"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="Изменить" Padding="12,6" MinHeight="36" Margin="0,0,6,4" IsEnabled="{Binding CanEdit}" Tag="{Binding Id}" Click="OnEdit"/>
+                                        <Button Style="{StaticResource DangerButton}" Content="Удалить" Padding="12,6" MinHeight="36" Margin="0,0,0,4" IsEnabled="{Binding CanEdit}" Tag="{Binding Id}" Click="OnDelete"/>
+                                    </WrapPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="26" Visibility="{Binding NoResults, Converter={StaticResource BoolToVis}}"><TextBlock Text="Ничего не найдено" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="Измените запрос, папку или состояние." Foreground="{StaticResource MutedBrush}" Margin="0,10,0,18"/><Button Content="Сбросить фильтры" Style="{StaticResource GhostButton}" Click="OnResetFilters" HorizontalAlignment="Center"/></StackPanel>
+                    <StackPanel Grid.Row="1" x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="26" Visibility="{Binding HasAccounts, Converter={StaticResource InvBoolToVis}}"><Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6" Width="56" Height="56" HorizontalAlignment="Center"><Image Source="/Assets/logo_mark.png" Width="26" Height="26"/></Border><TextBlock Text="Пока нет контейнеров" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource FgWhiteBrush}" HorizontalAlignment="Center" Margin="0,16,0,0"/><TextBlock Text="Создайте контейнер и добавьте tdata в его папку." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,20"/><Button Content="+  Создать контейнер" Style="{StaticResource PrimaryButton}" Click="OnAddAccount" HorizontalAlignment="Center"/></StackPanel>
+                </Grid>
                 <Grid x:Name="TasksPage" Visibility="Collapsed">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <Grid Margin="16,12,16,0">
-                        <TextBlock Text="Активные задачи" FontSize="17" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}" VerticalAlignment="Center"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Style="{StaticResource GhostButton}" Content="Очистить завершённые" Click="OnClearFinished" Margin="0,0,8,0"/>
-                            <Button Style="{StaticResource DangerButton}" Content="Остановить все" Click="OnStopAll"/>
-                        </StackPanel>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Margin="26,22,26,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="Активные задачи" FontSize="21" FontWeight="Bold" Foreground="{StaticResource FgWhiteBrush}"/><TextBlock Text="Чистка и экспорт: состояние, прогресс и журнал" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,12,0"/></StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"><Button Style="{StaticResource GhostButton}" Content="Очистить завершённые" Click="OnClearFinished" Margin="0,0,8,0"/><Button Style="{StaticResource DangerButton}" Content="Остановить все" Click="OnStopAll"/></StackPanel>
                     </Grid>
                     <Grid Grid.Row="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      Visibility="{Binding HasTasks, Converter={StaticResource BoolToVis}}">
-                            <ItemsControl x:Name="TaskList" Margin="16">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:TaskVm}">
-                                        <Border Background="{StaticResource CardBrush}"
-                                                BorderBrush="{StaticResource HairlineBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="12"
-                                                Margin="0,0,0,10"
-                                                Height="66"
-                                                Padding="16,14">
-                                            <Border.RenderTransform>
-                                                <TranslateTransform Y="0"/>
-                                            </Border.RenderTransform>
-                                            <Border.Triggers>
-                                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                                    <BeginStoryboard Storyboard="{StaticResource CardEnter}"/>
-                                                </EventTrigger>
-                                            </Border.Triggers>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="160"/>
-                                                    <ColumnDefinition Width="110"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Border Width="3" Height="42" CornerRadius="2" Background="{Binding ColorBrush}"/>
-                                                <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding SubLabel}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                                <ProgressBar Grid.Column="2" Height="6" VerticalAlignment="Center" Margin="0,0,10,0"
-                                                             Minimum="0"
-                                                             Maximum="{Binding ProgressMax, Mode=OneWay}"
-                                                             Value="{Binding ProgressValue, Mode=OneWay}"
-                                                             IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}"/>
-                                                <TextBlock Grid.Column="3" Text="{Binding CountText}" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                                <Border Grid.Column="4" Background="{StaticResource HoverBrush}" CornerRadius="4" Padding="8,3" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                    <TextBlock Text="{Binding PillText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding PillFg}"/>
-                                                </Border>
-                                                <Button Grid.Column="5" Style="{StaticResource GhostButton}" Content="Журнал" Width="84" Margin="0,0,6,0"
-                                                        Tag="{Binding Id}" Click="OnTaskLog"/>
-                                                <Button Grid.Column="6" Style="{StaticResource StopButton}" Content="{Binding ActionButtonText}" Width="84"
-                                                        Tag="{Binding Id}" Click="OnTaskAction"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                        <TextBlock Text="Нет активных задач.&#x0a;Запустите чистку или экспорт session - задача появится здесь."
-                                   TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                   Foreground="{StaticResource SubtleBrush}"
-                                   Visibility="{Binding HasTasks, Converter={StaticResource InvBoolToVis}}"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding HasTasks, Converter={StaticResource BoolToVis}}"><ItemsControl x:Name="TaskList" Margin="26,0,26,22"><ItemsControl.ItemTemplate><DataTemplate DataType="{x:Type vm:TaskVm}">
+                            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="6" Padding="18,16" Margin="0,0,0,12"><Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,16,0"><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource FgWhiteBrush}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding SubLabel}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,6,0,0"/></StackPanel>
+                                <Border Grid.Column="1" Background="{StaticResource HoverBrush}" CornerRadius="4" Padding="8,4" VerticalAlignment="Top"><TextBlock Text="{Binding PillText}" FontSize="11" Foreground="{Binding PillFg}"/></Border>
+                                <Grid Grid.Row="1" Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ProgressBar Minimum="0" Maximum="{Binding ProgressMax, Mode=OneWay}" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,14,0"/><TextBlock Grid.Column="1" Text="{Binding CountText}" Foreground="{StaticResource MutedBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/></Grid>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,12,0,0"><Button Content="Журнал" Style="{StaticResource GhostButton}" Tag="{Binding Id}" Click="OnTaskLog" MinHeight="36" Padding="12,6" Margin="0,0,8,0"/><Button Content="{Binding ActionButtonText}" Style="{StaticResource StopButton}" Tag="{Binding Id}" Click="OnTaskAction" MinHeight="36" Padding="12,6"/></StackPanel>
+                            </Grid></Border>
+                        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="26" Visibility="{Binding HasTasks, Converter={StaticResource InvBoolToVis}}"><TextBlock Text="Нет активных задач" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="Запустите чистку или экспорт session из контейнера.&#x0a;Здесь появятся прогресс и журнал выполнения." Foreground="{StaticResource MutedBrush}" TextAlignment="Center" Margin="0,10,0,0" LineHeight="21"/></StackPanel>
                     </Grid>
                 </Grid>
             </Grid>
-
-            <Border Grid.Row="3" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
-                <Grid Margin="16,0">
-                    <TextBlock x:Name="StatusText" Text="TG Manager" VerticalAlignment="Center" FontSize="11"
-                               Foreground="{StaticResource SubtleBrush}" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="VersionText" Text="" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
-                               Foreground="{StaticResource SubtleBrush}"/>
-                </Grid>
-            </Border>
+            <Border Grid.Row="2" Grid.ColumnSpan="2" Background="{StaticResource BgSideBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"><Grid Margin="14,0"><TextBlock x:Name="StatusText" Text="TG Manager" Foreground="{StaticResource SubtleBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,100,0"/><TextBlock x:Name="VersionText" Foreground="{StaticResource SubtleBrush}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border>
         </Grid>
     </Border>
 </Window>

@@ -70,6 +70,7 @@ if exist "%PORT%" rmdir /s /q "%PORT%"
 mkdir "%PORT%"
 copy /Y "%DIST%\app\TGManager.exe" "%PORT%\TGManager.exe" >nul
 copy /Y "%DIST%\TGWorker.exe" "%PORT%\TGWorker.exe" >nul
+copy /Y "%ROOT%\src\TGManager\Assets\Fonts\LICENSE.txt" "%PORT%\Inter-LICENSE.txt" >nul
 copy /Y "%ROOT%\README.md" "%PORT%\README.txt" >nul
 if exist "%ROOT%\RELEASE_NOTES.md" copy /Y "%ROOT%\RELEASE_NOTES.md" "%PORT%\RELEASE_NOTES.txt" >nul
 
