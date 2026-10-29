@@ -10,11 +10,15 @@ public sealed class AccountVm : INotifyPropertyChanged
 {
     public Account Model { get; private set; }
 
-    public AccountVm(Account account)
+    public AccountVm(Account account, ListLayout? layout = null)
     {
         Model = account;
+        Layout = layout ?? new ListLayout(new Settings());
         RefreshMeta();
     }
+
+    /// <summary>Общие размеры карточек: один экземпляр на список, привязки обновляются при смене настроек.</summary>
+    public ListLayout Layout { get; }
 
     public string Id => Model.Id;
     public string Name => Model.Name;
@@ -42,7 +46,7 @@ public sealed class AccountVm : INotifyPropertyChanged
     public bool Busy { get => _busy; set { if (_busy == value) return; _busy = value; Raise(nameof(Busy)); RaiseState(); } }
     /// <summary>Идёт остановка Telegram (кнопки заблокированы, чтобы не нажать дважды).</summary>
     public bool Stopping { get => _stopping; set { if (_stopping == value) return; _stopping = value; Raise(nameof(Stopping)); RaiseState(); } }
-    public bool HasTdata { get => _hasTdata; set { if (_hasTdata == value) return; _hasTdata = value; Raise(nameof(HasTdata)); Raise(nameof(TdataLabel)); Raise(nameof(TdataBrush)); } }
+    public bool HasTdata { get => _hasTdata; set { if (_hasTdata == value) return; _hasTdata = value; Raise(nameof(HasTdata)); Raise(nameof(TdataLabel)); Raise(nameof(TdataBrush)); Raise(nameof(MetaFull)); } }
 
     string _busyLabel = "Чистка…";
     public string BusyLabel
@@ -76,6 +80,8 @@ public sealed class AccountVm : INotifyPropertyChanged
         : (Brush)App.Current.FindResource("YellowBrush");
 
     public string MetaLeft => ProxySummary + "  ·  ";
+    public string NotesSuffix => Notes.Trim().Length == 0 ? "" : "  ·  " + Notes.ReplaceLineEndings(" ").Trim();
+    public string MetaFull => MetaLeft + TdataLabel + NotesSuffix;
 
     public void Apply(Account account)
     {
@@ -88,6 +94,8 @@ public sealed class AccountVm : INotifyPropertyChanged
         Raise(nameof(ColorBrush));
         Raise(nameof(ProxySummary));
         Raise(nameof(MetaLeft));
+        Raise(nameof(NotesSuffix));
+        Raise(nameof(MetaFull));
         RefreshMeta();
     }
 

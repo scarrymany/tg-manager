@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -61,6 +62,30 @@ internal static class UiChecks
                 folders.SelectedIndex = 0;
                 Directory.CreateDirectory(output);
                 Render(window, Path.Combine(output, "main.png"), 1260, 820);
+                var comfortableHeight = CardHeight(list);
+                if (Visible(list, 0, "Удалить") is false || Visible(list, 0, "Запуск") is false)
+                    throw new InvalidOperationException("Default card must show every action");
+                store.Settings.ListDensity = ListDensities.Compact;
+                store.Settings.CardPadding = ListDensities.Presets[ListDensities.Compact].Padding;
+                store.Settings.ButtonSize = ListDensities.Presets[ListDensities.Compact].ButtonSize;
+                store.Settings.ButtonStyle = ListDensities.Presets[ListDensities.Compact].ButtonStyle;
+                window.Layout.Apply(store.Settings);
+                Render(window, Path.Combine(output, "main-compact.png"), 1260, 820);
+                Render(window, Path.Combine(output, "main-compact-small.png"), 1040, 560);
+                if (comfortableHeight / CardHeight(list) < 5d / 3)
+                    throw new InvalidOperationException($"Compact card must fit 5 where comfortable fits 3 ({comfortableHeight} vs {CardHeight(list)})");
+                store.Settings.CardButtons = [CardActions.Launch, CardActions.Stop];
+                window.Layout.Apply(store.Settings);
+                Render(window, Path.Combine(output, "main-compact-two-buttons.png"), 1260, 820);
+                if (Visible(list, 0, "Удалить") is not false || Visible(list, 0, "Запуск") is not true)
+                    throw new InvalidOperationException("Hidden card actions must disappear without a restart");
+                store.Settings.ListDensity = ListDensities.Comfortable;
+                store.Settings.CardPadding = ListDensities.Presets[ListDensities.Comfortable].Padding;
+                store.Settings.ButtonSize = ListDensities.Presets[ListDensities.Comfortable].ButtonSize;
+                store.Settings.ButtonStyle = ListDensities.Presets[ListDensities.Comfortable].ButtonStyle;
+                store.Settings.CardButtons = [.. CardActions.All];
+                window.Layout.Apply(store.Settings);
+                Render(window, Path.Combine(output, "main.png"), 1260, 820);
                 Render(window, Path.Combine(output, "main-small.png"), 1040, 560);
                 AssertWithin(window, "SearchBox", 1040, 560);
                 AssertWithin(window, "FolderFilter", 1040, 560);
@@ -77,6 +102,13 @@ internal static class UiChecks
                 ((TextBox)editor.FindName("LineBox")).Clear();
                 Render(editor, Path.Combine(output, "account-proxy.png"), (int)editor.Width, (int)editor.Height);
                 var settings = new SettingsWindow(store.Settings);
+                var density = (ComboBox)settings.FindName("DensityBox");
+                density.SelectedIndex = 1;
+                if (((ComboBoxItem)((ComboBox)settings.FindName("StyleBox")).SelectedItem).Tag as string != ButtonStyles.Icon ||
+                    ((ComboBoxItem)((ComboBox)settings.FindName("HeightBox")).SelectedItem).Tag as string != "6")
+                    throw new InvalidOperationException("Compact density must apply its recommended card height and icon buttons");
+                Render(settings, Path.Combine(output, "settings-compact.png"), (int)settings.Width, (int)settings.Height);
+                density.SelectedIndex = 0;
                 Render(settings, Path.Combine(output, "settings.png"), (int)settings.Width, (int)settings.Height);
                 Render(settings, Path.Combine(output, "settings-small.png"), 520, 480);
                 var cleanup = new CleanupWindow(store.Accounts[0]);
@@ -177,6 +209,7 @@ internal static class UiChecks
                 app.Shutdown();
                 Console.WriteLine("PASS Offscreen startup isolation: no production mutex, broadcast, app launch or visible windows");
                 Console.WriteLine("PASS Bundled Inter, native layout, search, folders, sorting, proxy parsing and cleanup safeguards");
+                Console.WriteLine("PASS Compact container cards fit 5 where comfortable fits 3; card actions and density apply live");
                 Console.WriteLine("PASS Repeated/interrupted navigation and account/settings cancellation; all native dialogs");
                 Console.WriteLine("PASS Offscreen WPF renders at minimum size and 100/125/150/200 percent DPI");
             }
@@ -198,6 +231,27 @@ internal static class UiChecks
         timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
         timer.Start();
         Dispatcher.PushFrame(frame);
+    }
+
+    static double CardHeight(ItemsControl list)
+        => ((FrameworkElement)list.ItemContainerGenerator.ContainerFromIndex(0)).ActualHeight;
+
+    /// <summary>Показана ли кнопка карточки (Visibility; окно не отображается) с таким AutomationProperties.Name; null — кнопки нет.</summary>
+    static bool? Visible(ItemsControl list, int index, string name)
+    {
+        var button = Descendants((DependencyObject)list.ItemContainerGenerator.ContainerFromIndex(index))
+            .OfType<Button>().FirstOrDefault(b => AutomationProperties.GetName(b) == name);
+        return button is null ? null : button.Visibility == Visibility.Visible;
+    }
+
+    static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            yield return child;
+            foreach (var nested in Descendants(child)) yield return nested;
+        }
     }
 
     static void AssertWithin(Window window, string name, int width, int height)
