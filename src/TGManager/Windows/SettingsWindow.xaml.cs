@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 using TGManager.Services;
@@ -10,11 +11,19 @@ namespace TGManager.Windows;
 public partial class SettingsWindow : Window
 {
     readonly Settings _settings;
+    readonly (string Key, CheckBox Box)[] _cardButtons;
+    bool _loading = true;
 
     public SettingsWindow(Settings settings)
     {
         _settings = settings;
         InitializeComponent();
+        _cardButtons =
+        [
+            (CardActions.Launch, LaunchChk), (CardActions.Stop, StopChk), (CardActions.Folder, FolderChk),
+            (CardActions.Export, ExportChk), (CardActions.Cleanup, CleanupChk), (CardActions.Edit, EditChk),
+            (CardActions.Delete, DeleteChk),
+        ];
         Chrome.Attach(this, WindowFrame);
         PreviewKeyDown += (_, e) =>
         {
@@ -25,10 +34,33 @@ public partial class SettingsWindow : Window
         TgBox.Text = settings.TelegramBinary;
         PcBox.Text = settings.ProxychainsBinary;
         ManyChk.IsChecked = settings.AllowMany;
+        Select(DensityBox, settings.ListDensity);
+        SelectNearestHeight(settings.CardPadding);
+        Select(SizeBox, settings.ButtonSize);
+        Select(StyleBox, settings.ButtonStyle);
+        foreach (var (key, box) in _cardButtons) box.IsChecked = settings.CardButtons.Contains(key);
+        _loading = false;
         DataLabel.Text = "Данные контейнеров: " + Paths.AccountsDir;
         TgBox.TextChanged += (_, _) => RefreshStatus();
         PcBox.TextChanged += (_, _) => RefreshStatus();
         RefreshStatus();
+    }
+
+    static void Select(ComboBox box, string tag)
+        => box.SelectedItem = box.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == tag) ?? box.Items[0];
+
+    void SelectNearestHeight(int padding)
+        => HeightBox.SelectedItem = HeightBox.Items.Cast<ComboBoxItem>()
+            .MinBy(i => Math.Abs(int.Parse((string)i.Tag) - padding));
+
+    /// <summary>Плотность выставляет рекомендуемые высоту карточки и вид кнопок; набор кнопок остаётся как выбран.</summary>
+    void OnDensityChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || DensityBox.SelectedItem is not ComboBoxItem { Tag: string density }) return;
+        var preset = ListDensities.Presets[density];
+        SelectNearestHeight(preset.Padding);
+        Select(SizeBox, preset.ButtonSize);
+        Select(StyleBox, preset.ButtonStyle);
     }
 
     void RefreshStatus()
@@ -131,6 +163,11 @@ public partial class SettingsWindow : Window
         _settings.TelegramBinary = TgBox.Text.Trim();
         _settings.ProxychainsBinary = PcBox.Text.Trim();
         _settings.AllowMany = ManyChk.IsChecked == true;
+        _settings.ListDensity = (string)((ComboBoxItem)DensityBox.SelectedItem).Tag;
+        _settings.CardPadding = int.Parse((string)((ComboBoxItem)HeightBox.SelectedItem).Tag);
+        _settings.ButtonSize = (string)((ComboBoxItem)SizeBox.SelectedItem).Tag;
+        _settings.ButtonStyle = (string)((ComboBoxItem)StyleBox.SelectedItem).Tag;
+        _settings.CardButtons = _cardButtons.Where(b => b.Box.IsChecked == true).Select(b => b.Key).ToList();
         DialogResult = true;
         Close();
     }

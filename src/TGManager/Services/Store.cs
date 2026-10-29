@@ -83,6 +83,7 @@ public sealed class Store
         Settings.ContainerFolders = (Settings.ContainerFolders ?? []).Where(f => !string.IsNullOrWhiteSpace(f))
             .Select(f => f.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         Settings.ProxychainsBinary ??= "";
+        Settings.NormalizeList();
         if (idsRewritten)
         {
             try { Save(); } catch { /* загрузку не блокируем */ }

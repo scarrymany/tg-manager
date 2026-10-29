@@ -82,6 +82,61 @@
                     </Border>
 
                     <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="СПИСОК КОНТЕЙНЕРОВ" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SubtleBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Плотность" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="DensityBox" Style="{StaticResource FieldCombo}" SelectionChanged="OnDensityChanged"
+                                      AutomationProperties.Name="Плотность списка" Margin="0,0,0,12">
+                                <ComboBoxItem Content="Обычная: просторные карточки" Tag="comfortable"/>
+                                <ComboBoxItem Content="Компактная: одна строка на контейнер" Tag="compact"/>
+                            </ComboBox>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,6,0">
+                                    <TextBlock Text="Высота карточки" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="HeightBox" Style="{StaticResource FieldCombo}" AutomationProperties.Name="Высота карточки">
+                                        <ComboBoxItem Content="Минимальная" Tag="4"/>
+                                        <ComboBoxItem Content="Низкая" Tag="6"/>
+                                        <ComboBoxItem Content="Средняя" Tag="10"/>
+                                        <ComboBoxItem Content="Высокая" Tag="16"/>
+                                        <ComboBoxItem Content="Максимальная" Tag="22"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                    <TextBlock Text="Размер кнопок" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="SizeBox" Style="{StaticResource FieldCombo}" AutomationProperties.Name="Размер кнопок">
+                                        <ComboBoxItem Content="Малые" Tag="small"/>
+                                        <ComboBoxItem Content="Средние" Tag="medium"/>
+                                        <ComboBoxItem Content="Крупные" Tag="large"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="Вид кнопок" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="StyleBox" Style="{StaticResource FieldCombo}" AutomationProperties.Name="Вид кнопок" Margin="0,0,0,12">
+                                <ComboBoxItem Content="С подписями" Tag="text"/>
+                                <ComboBoxItem Content="Только значки (подсказка при наведении)" Tag="icon"/>
+                            </ComboBox>
+                            <TextBlock Text="Кнопки на карточке" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                            <UniformGrid Columns="2">
+                                <CheckBox x:Name="LaunchChk" Style="{StaticResource GlassCheck}" Content="Запуск"/>
+                                <CheckBox x:Name="StopChk" Style="{StaticResource GlassCheck}" Content="Стоп"/>
+                                <CheckBox x:Name="FolderChk" Style="{StaticResource GlassCheck}" Content="Папка"/>
+                                <CheckBox x:Name="ExportChk" Style="{StaticResource GlassCheck}" Content="Экспорт session"/>
+                                <CheckBox x:Name="CleanupChk" Style="{StaticResource GlassCheck}" Content="Чистка"/>
+                                <CheckBox x:Name="EditChk" Style="{StaticResource GlassCheck}" Content="Изменить"/>
+                                <CheckBox x:Name="DeleteChk" Style="{StaticResource GlassCheck}" Content="Удалить"/>
+                            </UniformGrid>
+                            <TextBlock Text="Скрытые действия остаются в меню карточки (правая кнопка мыши). Смена плотности выставляет рекомендуемые высоту и кнопки."
+                                       TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource SubtleBrush}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{StaticResource Card2Brush}" BorderBrush="{StaticResource HairlineBrush}"
                             BorderThickness="1" CornerRadius="6" Padding="14,12">
                         <StackPanel>
                             <TextBlock Text="ПРОЧЕЕ" FontSize="11" FontWeight="SemiBold"

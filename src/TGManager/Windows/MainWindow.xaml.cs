@@ -31,6 +31,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string ResultCount => $"Показано {_accountsView?.Cast<AccountVm>().Count() ?? 0} из {Accounts.Count}";
     public bool NoResults => HasAccounts && _accountsView?.IsEmpty == true;
 
+    /// <summary>Размеры карточек и шапки списка; общий для всех карточек, обновляется при сохранении настроек.</summary>
+    public ListLayout Layout { get; }
+
     public ObservableCollection<AccountVm> Accounts { get; } = [];
     public ObservableCollection<TaskVm> Tasks { get; } = [];
 
@@ -42,6 +45,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public MainWindow(Store store)
     {
         _store = store;
+        Layout = new ListLayout(store.Settings);
         DataContext = this;
         InitializeComponent();
         Chrome.Attach(this, WindowFrame);
@@ -74,7 +78,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         Accounts.Clear();
         foreach (var a in _store.Accounts)
-            Accounts.Add(new AccountVm(a));
+            Accounts.Add(new AccountVm(a, Layout));
         HasAccounts = Accounts.Count > 0;
         PollStatus();
     }
@@ -271,7 +275,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var account = dlg.Result;
         Directory.CreateDirectory(Paths.AccountWorkdir(account.Id));
         _store.Add(account);
-        Accounts.Add(new AccountVm(account));
+        Accounts.Add(new AccountVm(account, Layout));
         HasAccounts = true;
 
         var prep = new DownloadWindow("Подготовка контейнера",
@@ -750,6 +754,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (dlg.ShowDialog() == true)
         {
             _store.Save();
+            Layout.Apply(_store.Settings);
             Status("Настройки сохранены");
         }
     }
