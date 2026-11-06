@@ -74,6 +74,8 @@ SCRAMBLE_LEAD = 0.3
 SHINE_START, SHINE_DURATION, SHINE_WIDTH = 3.0, 1.1, 90
 GLITCH_RATE = 0.004
 DISSOLVE_START, DISSOLVE_SPAN = 5.2, 0.9
+# The GIF starts on a fully drawn frame: GitHub shows only the first frame when autoplay is off.
+FIRST_FRAME_AT = 4.7
 
 
 def mono_font() -> ImageFont.FreeTypeFont:
@@ -162,7 +164,9 @@ def render() -> None:
 
     frames_dir = Path(tempfile.mkdtemp(prefix="tg-manager-banner-"))
     try:
-        for index in range(int(SECONDS * FPS)):
+        total = int(SECONDS * FPS)
+        first = int(FIRST_FRAME_AT * FPS)
+        for index in range(total):
             now = index / FPS
             frame = backdrop.copy()
             shine_x = (now - SHINE_START) / SHINE_DURATION * (WIDTH + 2 * SHINE_WIDTH) - SHINE_WIDTH
@@ -185,7 +189,7 @@ def render() -> None:
                 frame.paste(tile(BLOCK, GREEN), (cursor[0] * cell_w, cursor[1] * LINE_HEIGHT))
             canvas = Image.new("RGB", (WIDTH, HEIGHT), BG)
             canvas.paste(frame, ((WIDTH - frame.width) // 2, (HEIGHT - frame.height) // 2))
-            canvas.save(frames_dir / f"f{index:04d}.png")
+            canvas.save(frames_dir / f"f{(index - first) % total:04d}.png")
         encode(frames_dir)
     finally:
         shutil.rmtree(frames_dir, ignore_errors=True)
