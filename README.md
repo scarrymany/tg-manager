@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="assets/icon_128.png" width="88" alt="TG Manager">
-
-# TG Manager
+<img src="docs/media/banner.gif" alt="TG Manager">
 
 **Десятки Telegram-аккаунтов на одном Windows.<br>Каждый - в своём контейнере, со своим прокси, в один клик.**
 
@@ -14,10 +12,6 @@
 [![Portable](https://img.shields.io/badge/portable-без%20установки-white?labelColor=0a0a0a)](#скачать)
 
 [**Скачать**](https://github.com/scarrymany/tg-manager/releases/latest) · [Установка одной командой](#установка-одной-командой) · [Возможности](#возможности) · [Скриншоты](#как-это-выглядит) · [Изменения](CHANGELOG.md)
-
-<br>
-
-<img src="docs/media/showcase.gif" alt="TG Manager: запуск контейнеров, поиск, папки и задачи">
 
 </div>
 
@@ -134,6 +128,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -InstallDir "D:\Apps\TG-Man
 
 ## Как это выглядит
 
+<p align="center"><img src="docs/media/showcase.gif" alt="TG Manager: запуск контейнеров, поиск, папки и задачи"></p>
+
 <table>
 <tr>
 <td colspan="2"><img src="docs/screens/main.png" width="100%" alt="Компактный список контейнеров"><br><sub><b>Компактный список</b> - одна строка на аккаунт: статус, прокси, tdata, заметка и все действия значками.</sub></td>
@@ -222,11 +218,14 @@ build.bat
 CI (GitHub Actions, `windows-latest`) прогоняет проверки, собирает zip и публикует релиз `v<версия>`
 при каждом пуше в `main`; версия берётся из `TGManager.csproj`.
 
-Скриншоты и GIF для README пересобираются одной командой (нужен `ffmpeg` в PATH, окна на экран не выводятся):
+Картинки для README пересобираются скриптами из `docs/showcase` (нужен `ffmpeg` в PATH, окна на экран не выводятся):
 
 ```bat
 dotnet run --project docs\showcase -c Release
+python docs\showcase\ascii_banner.py
 ```
+
+Первая команда снимает скриншоты и демо-GIF, вторая рисует ASCII-баннер из шапки (нужен Pillow).
 
 ## Требования
 
