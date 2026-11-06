@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Animated ASCII banner for the README: docs/media/banner.gif.
+"""Animated ASCII banner for the README: docs/media/tg-manager-ascii.gif.
 
 The paper plane uses the silhouette from assets/make_icon.py, the title is the figlet "ANSI Shadow" style.
 Glyphs are drawn with a Windows monospace font. Needs Pillow and ffmpeg on PATH.
@@ -18,7 +18,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 REPO = Path(__file__).resolve().parents[2]
-OUTPUT = REPO / "docs" / "media" / "banner.gif"
+OUTPUT = REPO / "docs" / "media" / "tg-manager-ascii.gif"
 MONO_FONTS = (Path("C:/Windows/Fonts/CascadiaMono.ttf"), Path("C:/Windows/Fonts/consola.ttf"))
 
 WIDTH, HEIGHT = 960, 300

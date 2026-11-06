@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/media/banner.gif" alt="TG Manager">
+<img src="docs/media/tg-manager-ascii.gif" alt="TG Manager">
 
 **Десятки Telegram-аккаунтов на одном Windows.<br>Каждый - в своём контейнере, со своим прокси, в один клик.**
 
